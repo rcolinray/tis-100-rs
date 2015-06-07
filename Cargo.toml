@@ -1,0 +1,8 @@
+[package]
+name = "tis-100"
+version = "0.1.0"
+authors = ["Colin Ray <r.colinray@gmail.com>"]
+
+[dependencies]
+regex = "0.1.8"
+regex_macros = "0.1.19"
