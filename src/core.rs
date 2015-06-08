@@ -219,7 +219,7 @@ fn test_parse_psedo_port() {
 fn test_parse_io_register() {
     assert_eq!(str::parse::<IoRegister>("UP"), Ok(IoRegister::PortReg(Port::Up)));
     assert_eq!(str::parse::<IoRegister>("ANY"), Ok(IoRegister::PseudoReg(PseudoPort::Any)));
-    assert_eq!(str::parse::<IoRegister>("bad"), Err(ParsePortError));
+    assert_eq!(str::parse::<IoRegister>("bad"), Err(ParseIoRegisterError));
 }
 
 #[test]
@@ -227,7 +227,7 @@ fn test_parse_register() {
     assert_eq!(str::parse::<Register>("ACC"), Ok(Register::Acc));
     assert_eq!(str::parse::<Register>("acc"), Ok(Register::Acc));
     assert_eq!(str::parse::<Register>("NIl"), Ok(Register::Nil));
-    assert_eq!(str::parse::<Register>("UP"), Ok(Register::Io(IoRegister::Port(Port::Up))));
+    assert_eq!(str::parse::<Register>("UP"), Ok(Register::Io(IoRegister::PortReg(Port::Up))));
     assert_eq!(str::parse::<Register>("bad"), Err(ParseRegisterError));
 }
 

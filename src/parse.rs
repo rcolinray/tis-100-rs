@@ -31,6 +31,7 @@ type ParseResult<'a, T> = Result<T, ParseProgramError<'a>>;
 /// use tis_100::core::Instruction::*;
 /// use tis_100::core::Source::*;
 /// use tis_100::core::Register::*;
+/// use tis_100::core::IoRegister::*;
 /// use tis_100::core::Port::*;
 /// use tis_100::parse::parse_program;
 ///
@@ -38,9 +39,9 @@ type ParseResult<'a, T> = Result<T, ParseProgramError<'a>>;
 ///            ADD 1\n
 ///            MOV ACC DOWN\n";
 /// let prog = parse_program(src).unwrap();
-/// assert_eq!(prog[0], Mov(Reg(Io(Up)), Acc));
+/// assert_eq!(prog[0], Mov(Reg(Io(PortReg(Up))), Acc));
 /// assert_eq!(prog[1], Add(Val(1)));
-/// assert_eq!(prog[2], Mov(Reg(Acc), Io(Down)));
+/// assert_eq!(prog[2], Mov(Reg(Acc), Io(PortReg(Down))));
 /// ```
 pub fn parse_program<'a>(source: &'a str) -> Result<Program, ErrorList<'a>> {
     // The basic parsing strategy is:
