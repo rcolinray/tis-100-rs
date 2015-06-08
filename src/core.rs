@@ -53,8 +53,8 @@ impl FromStr for PseudoPort {
 /// A TIS-100 port or pseudo-port.
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum IoRegister {
-    Port(Port),
-    Pseudo(PseudoPort),
+    PortReg(Port),
+    PseudoReg(PseudoPort),
 }
 
 /// An error which can be returned when parsing an IO register.
@@ -66,9 +66,9 @@ impl FromStr for IoRegister {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Ok(port) = str::parse::<Port>(s) {
-            Ok(IoRegister::Port(port))
+            Ok(IoRegister::PortReg(port))
         } else if let Ok(pseudo) = str::parse::<PseudoPort>(s) {
-            Ok(IoRegister::Pseudo(pseudo))
+            Ok(IoRegister::PseudoReg(pseudo))
         } else {
             Err(ParseIoRegisterError)
         }
@@ -217,8 +217,8 @@ fn test_parse_psedo_port() {
 
 #[test]
 fn test_parse_io_register() {
-    assert_eq!(str::parse::<IoRegister>("UP"), Ok(IoRegister::Port(Port::Up)));
-    assert_eq!(str::parse::<IoRegister>("ANY"), Ok(IoRegister::Pseudo(PseudoPort::Any)));
+    assert_eq!(str::parse::<IoRegister>("UP"), Ok(IoRegister::PortReg(Port::Up)));
+    assert_eq!(str::parse::<IoRegister>("ANY"), Ok(IoRegister::PseudoReg(PseudoPort::Any)));
     assert_eq!(str::parse::<IoRegister>("bad"), Err(ParsePortError));
 }
 
