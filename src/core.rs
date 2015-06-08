@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 /// A TIS-100 port.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Port {
     Up,
     Down,
@@ -32,7 +32,7 @@ impl FromStr for Port {
 }
 
 /// A TIS-100 register.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Register {
     Acc,
     Bak,
@@ -64,7 +64,7 @@ impl FromStr for Register {
 }
 
 /// The operand component of a TIS-100 instruction.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Operand {
     Val(isize),
     Reg(Register),
@@ -89,7 +89,7 @@ impl FromStr for Operand {
 }
 
 /// The opcode component of a TIS-100 instruction.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Opcode {
     Nop,
     Mov,
@@ -134,7 +134,7 @@ impl FromStr for Opcode {
 }
 
 /// A valid TIS-100 instruction.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Instruction {
     Nop,
     Mov(Operand, Register),
