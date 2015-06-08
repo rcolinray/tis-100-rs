@@ -29,7 +29,7 @@ type ParseResult<'a, T> = Result<T, ParseProgramError<'a>>;
 /// ```
 /// use tis_100::core::*;
 /// use tis_100::core::Instruction::*;
-/// use tis_100::core::Operand::*;
+/// use tis_100::core::Source::*;
 /// use tis_100::core::Register::*;
 /// use tis_100::core::Port::*;
 /// use tis_100::parse::parse_program;
@@ -170,19 +170,19 @@ fn parse_two_operands<'a, T: FromStr, U: FromStr>(operand1: &'a str, operand2: &
 
 #[test]
 fn test_parse_one_operand() {
-    use core::{Register, Operand};
+    use core::{Register, Source};
 
-    assert_eq!(parse_one_operand("ACC"), Ok(Operand::Reg(Register::Acc)));
-    assert_eq!(parse_one_operand::<Operand>("bad"), Err(InvalidExpression("bad")));
+    assert_eq!(parse_one_operand("ACC"), Ok(Source::Reg(Register::Acc)));
+    assert_eq!(parse_one_operand::<Source>("bad"), Err(InvalidExpression("bad")));
 }
 
 #[test]
 fn test_parse_two_operands() {
-    use core::{Register, Operand};
+    use core::{Register, Source};
 
-    assert_eq!(parse_two_operands("1", "ACC"), Ok((Operand::Val(1), Operand::Reg(Register::Acc))));
-    assert_eq!(parse_two_operands::<Operand, Operand>("1", "bad"), Err(InvalidExpression("bad")));
-    assert_eq!(parse_two_operands::<Operand, Operand>("bad", "bad"), Err(InvalidExpression("bad")));
+    assert_eq!(parse_two_operands("1", "ACC"), Ok((Source::Val(1), Source::Reg(Register::Acc))));
+    assert_eq!(parse_two_operands::<Source, Register>("1", "bad"), Err(InvalidExpression("bad")));
+    assert_eq!(parse_two_operands::<Source, Register>("bad", "bad"), Err(InvalidExpression("bad")));
 }
 
 #[test]
@@ -203,7 +203,7 @@ fn test_count_operands() {
 
 #[test]
 fn test_parse_instruction() {
-    use core::Operand::*;
+    use core::Source::*;
     use core::Register::*;
 
     let mut labels = HashMap::new();

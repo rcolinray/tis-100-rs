@@ -105,27 +105,27 @@ impl FromStr for Register {
     }
 }
 
-/// The operand component of a TIS-100 instruction.
+/// The source component of a TIS-100 instruction.
 #[derive(Debug, PartialEq, Copy, Clone)]
-pub enum Operand {
+pub enum Source {
     Val(isize),
     Reg(Register),
 }
 
-/// An error which can be returned when parsing an operand.
+/// An error which can be returned when parsing an source.
 #[derive(Debug, PartialEq)]
-pub struct ParseOperandError;
+pub struct ParseSourceError;
 
-impl FromStr for Operand {
-    type Err = ParseOperandError;
+impl FromStr for Source {
+    type Err = ParseSourceError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Ok(val) = str::parse::<isize>(s) {
-            Ok(Operand::Val(val))
+            Ok(Source::Val(val))
         } else if let Ok(register) = str::parse::<Register>(s) {
-            Ok(Operand::Reg(register))
+            Ok(Source::Reg(register))
         } else {
-            Err(ParseOperandError)
+            Err(ParseSourceError)
         }
     }
 }
@@ -179,18 +179,18 @@ impl FromStr for Opcode {
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Instruction {
     Nop,
-    Mov(Operand, Register),
+    Mov(Source, Register),
     Swp,
     Sav,
-    Add(Operand),
-    Sub(Operand),
+    Add(Source),
+    Sub(Source),
     Neg,
     Jmp(usize),
     Jez(usize),
     Jnz(usize),
     Jgz(usize),
     Jlz(usize),
-    Jro(Operand),
+    Jro(Source),
 }
 
 /// The list of instructions created by parsing the program source code. The
@@ -232,10 +232,10 @@ fn test_parse_register() {
 }
 
 #[test]
-fn test_parse_operand() {
-    assert_eq!(str::parse::<Operand>("ACC"), Ok(Operand::Reg(Register::Acc)));
-    assert_eq!(str::parse::<Operand>("1"), Ok(Operand::Val(1)));
-    assert_eq!(str::parse::<Operand>("bad"), Err(ParseOperandError));
+fn test_parse_source() {
+    assert_eq!(str::parse::<Source>("ACC"), Ok(Source::Reg(Register::Acc)));
+    assert_eq!(str::parse::<Source>("1"), Ok(Source::Val(1)));
+    assert_eq!(str::parse::<Source>("bad"), Err(ParseSourceError));
 }
 
 #[test]
