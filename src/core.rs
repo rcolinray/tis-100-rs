@@ -79,7 +79,6 @@ impl FromStr for IoRegister {
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Register {
     Acc,
-    Bak,
     Nil,
     Io(IoRegister),
 }
@@ -94,7 +93,6 @@ impl FromStr for Register {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_uppercase().as_str() {
             "ACC" => Ok(Register::Acc),
-            "BAK" => Ok(Register::Bak),
             "NIL" => Ok(Register::Nil),
             _ => {
                 if let Ok(reg) = str::parse::<IoRegister>(s) {
@@ -228,7 +226,6 @@ fn test_parse_io_register() {
 fn test_parse_register() {
     assert_eq!(str::parse::<Register>("ACC"), Ok(Register::Acc));
     assert_eq!(str::parse::<Register>("acc"), Ok(Register::Acc));
-    assert_eq!(str::parse::<Register>("BAK"), Ok(Register::Bak));
     assert_eq!(str::parse::<Register>("NIl"), Ok(Register::Nil));
     assert_eq!(str::parse::<Register>("UP"), Ok(Register::Io(IoRegister::Port(Port::Up))));
     assert_eq!(str::parse::<Register>("bad"), Err(ParseRegisterError));
