@@ -148,7 +148,7 @@ pub enum Instruction {
     Jnz(usize),
     Jgz(usize),
     Jlz(usize),
-    Jro(isize),
+    Jro(Operand),
 }
 
 /// The list of instructions created by parsing the program source code. The

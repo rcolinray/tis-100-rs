@@ -252,6 +252,7 @@ fn test_parse_instruction() {
     assert_eq!(parse_instruction("JLZ", "", "", &labels), Err(InvalidInstruction("JLZ", "", "")));
     assert_eq!(parse_instruction("JLZ", "BAD", "", &labels), Err(UndefinedLabel("BAD")));
 
-    assert_eq!(parse_instruction("JRO", "-1", "", &labels), Ok(Jro(-1)));
+    assert_eq!(parse_instruction("JRO", "-1", "", &labels), Ok(Jro(Val(-1))));
+    assert_eq!(parse_instruction("JRO", "ACC", "", &labels), Ok(Jro(Reg(Acc))));
     assert_eq!(parse_instruction("JRO", "", "", &labels), Err(InvalidInstruction("JRO", "", "")));
 }
