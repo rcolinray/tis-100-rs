@@ -151,6 +151,10 @@ pub enum Instruction {
     Jro(isize),
 }
 
+/// The list of instructions created by parsing the program source code. The
+/// instructions can then be evaluated by a basic execution node.
+pub type Program = Vec<Instruction>;
+
 #[test]
 fn test_parse_port() {
     assert_eq!(str::parse::<Port>("UP"), Ok(Port::Up));

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::str::FromStr;
-use core::{Opcode, Instruction};
+use core::{Opcode, Instruction, Program};
 use core::Instruction::*;
 
 /// An error which can be returned when parsing a TIS-100 program.
@@ -18,9 +18,6 @@ use self::ParseProgramError::*;
 
 /// The list of errors encountered while parsing the program source code.
 pub type ErrorList<'a> = Vec<ParseProgramError<'a>>;
-
-/// The list of instructions created by parsing the program source code.
-pub type Program = Vec<Instruction>;
 
 type ParseResult<'a, T> = Result<T, ParseProgramError<'a>>;
 
