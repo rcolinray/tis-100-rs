@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::str::FromStr;
-use core::{Opcode, Instruction, Program};
+use core::{Instruction, Program};
 use core::Instruction::*;
 
 /// An error which can be returned when parsing a TIS-100 program.
@@ -168,6 +168,71 @@ fn parse_two_operands<'a, T: FromStr, U: FromStr>(operand1: &'a str, operand2: &
         Err(_) => Err(InvalidExpression(operand1)),
     }
 }
+
+/// The opcode component of a TIS-100 instruction.
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum Opcode {
+    Nop,
+    Mov,
+    Swp,
+    Sav,
+    Add,
+    Sub,
+    Neg,
+    Jmp,
+    Jez,
+    Jnz,
+    Jgz,
+    Jlz,
+    Jro,
+}
+
+/// An error which can be returned when parsing an opcode.
+#[derive(Debug, PartialEq)]
+pub struct ParseOpcodeError;
+
+impl FromStr for Opcode {
+    type Err = ParseOpcodeError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "NOP" => Ok(Opcode::Nop),
+            "MOV" => Ok(Opcode::Mov),
+            "SWP" => Ok(Opcode::Swp),
+            "SAV" => Ok(Opcode::Sav),
+            "ADD" => Ok(Opcode::Add),
+            "SUB" => Ok(Opcode::Sub),
+            "NEG" => Ok(Opcode::Neg),
+            "JMP" => Ok(Opcode::Jmp),
+            "JEZ" => Ok(Opcode::Jez),
+            "JNZ" => Ok(Opcode::Jnz),
+            "JGZ" => Ok(Opcode::Jgz),
+            "JLZ" => Ok(Opcode::Jlz),
+            "JRO" => Ok(Opcode::Jro),
+            _ => Err(ParseOpcodeError),
+        }
+    }
+}
+
+#[test]
+fn test_parse_opcode() {
+    assert_eq!(str::parse::<Opcode>("NOP"), Ok(Opcode::Nop));
+    assert_eq!(str::parse::<Opcode>("nop"), Ok(Opcode::Nop));
+    assert_eq!(str::parse::<Opcode>("MOV"), Ok(Opcode::Mov));
+    assert_eq!(str::parse::<Opcode>("SWP"), Ok(Opcode::Swp));
+    assert_eq!(str::parse::<Opcode>("SAV"), Ok(Opcode::Sav));
+    assert_eq!(str::parse::<Opcode>("ADD"), Ok(Opcode::Add));
+    assert_eq!(str::parse::<Opcode>("SUB"), Ok(Opcode::Sub));
+    assert_eq!(str::parse::<Opcode>("NEG"), Ok(Opcode::Neg));
+    assert_eq!(str::parse::<Opcode>("JMP"), Ok(Opcode::Jmp));
+    assert_eq!(str::parse::<Opcode>("JEZ"), Ok(Opcode::Jez));
+    assert_eq!(str::parse::<Opcode>("JNZ"), Ok(Opcode::Jnz));
+    assert_eq!(str::parse::<Opcode>("JGZ"), Ok(Opcode::Jgz));
+    assert_eq!(str::parse::<Opcode>("JLZ"), Ok(Opcode::Jlz));
+    assert_eq!(str::parse::<Opcode>("JRO"), Ok(Opcode::Jro));
+    assert_eq!(str::parse::<Opcode>("bad"), Err(ParseOpcodeError));
+}
+
 
 #[test]
 fn test_parse_one_operand() {
