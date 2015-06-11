@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::str::FromStr;
-use core::{Opcode, Instruction, Program};
+use core::{Instruction, Program};
 use core::Instruction::*;
 
 /// An error which can be returned when parsing a TIS-100 program.
@@ -27,10 +27,10 @@ type ParseResult<'a, T> = Result<T, ParseProgramError<'a>>;
 /// Example:
 ///
 /// ```
-/// use tis_100::core::*;
 /// use tis_100::core::Instruction::*;
-/// use tis_100::core::Operand::*;
+/// use tis_100::core::Source::*;
 /// use tis_100::core::Register::*;
+/// use tis_100::core::IoRegister::*;
 /// use tis_100::core::Port::*;
 /// use tis_100::parse::parse_program;
 ///
@@ -38,9 +38,9 @@ type ParseResult<'a, T> = Result<T, ParseProgramError<'a>>;
 ///            ADD 1\n
 ///            MOV ACC DOWN\n";
 /// let prog = parse_program(src).unwrap();
-/// assert_eq!(prog[0], Mov(Reg(Io(Up)), Acc));
+/// assert_eq!(prog[0], Mov(Reg(Io(Dir(Up))), Acc));
 /// assert_eq!(prog[1], Add(Val(1)));
-/// assert_eq!(prog[2], Mov(Reg(Acc), Io(Down)));
+/// assert_eq!(prog[2], Mov(Reg(Acc), Io(Dir(Down))));
 /// ```
 pub fn parse_program<'a>(source: &'a str) -> Result<Program, ErrorList<'a>> {
     // The basic parsing strategy is:
@@ -168,21 +168,86 @@ fn parse_two_operands<'a, T: FromStr, U: FromStr>(operand1: &'a str, operand2: &
     }
 }
 
+/// The opcode component of a TIS-100 instruction.
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum Opcode {
+    Nop,
+    Mov,
+    Swp,
+    Sav,
+    Add,
+    Sub,
+    Neg,
+    Jmp,
+    Jez,
+    Jnz,
+    Jgz,
+    Jlz,
+    Jro,
+}
+
+/// An error which can be returned when parsing an opcode.
+#[derive(Debug, PartialEq)]
+pub struct ParseOpcodeError;
+
+impl FromStr for Opcode {
+    type Err = ParseOpcodeError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "NOP" => Ok(Opcode::Nop),
+            "MOV" => Ok(Opcode::Mov),
+            "SWP" => Ok(Opcode::Swp),
+            "SAV" => Ok(Opcode::Sav),
+            "ADD" => Ok(Opcode::Add),
+            "SUB" => Ok(Opcode::Sub),
+            "NEG" => Ok(Opcode::Neg),
+            "JMP" => Ok(Opcode::Jmp),
+            "JEZ" => Ok(Opcode::Jez),
+            "JNZ" => Ok(Opcode::Jnz),
+            "JGZ" => Ok(Opcode::Jgz),
+            "JLZ" => Ok(Opcode::Jlz),
+            "JRO" => Ok(Opcode::Jro),
+            _ => Err(ParseOpcodeError),
+        }
+    }
+}
+
+#[test]
+fn test_parse_opcode() {
+    assert_eq!(str::parse::<Opcode>("NOP"), Ok(Opcode::Nop));
+    assert_eq!(str::parse::<Opcode>("nop"), Ok(Opcode::Nop));
+    assert_eq!(str::parse::<Opcode>("MOV"), Ok(Opcode::Mov));
+    assert_eq!(str::parse::<Opcode>("SWP"), Ok(Opcode::Swp));
+    assert_eq!(str::parse::<Opcode>("SAV"), Ok(Opcode::Sav));
+    assert_eq!(str::parse::<Opcode>("ADD"), Ok(Opcode::Add));
+    assert_eq!(str::parse::<Opcode>("SUB"), Ok(Opcode::Sub));
+    assert_eq!(str::parse::<Opcode>("NEG"), Ok(Opcode::Neg));
+    assert_eq!(str::parse::<Opcode>("JMP"), Ok(Opcode::Jmp));
+    assert_eq!(str::parse::<Opcode>("JEZ"), Ok(Opcode::Jez));
+    assert_eq!(str::parse::<Opcode>("JNZ"), Ok(Opcode::Jnz));
+    assert_eq!(str::parse::<Opcode>("JGZ"), Ok(Opcode::Jgz));
+    assert_eq!(str::parse::<Opcode>("JLZ"), Ok(Opcode::Jlz));
+    assert_eq!(str::parse::<Opcode>("JRO"), Ok(Opcode::Jro));
+    assert_eq!(str::parse::<Opcode>("bad"), Err(ParseOpcodeError));
+}
+
+
 #[test]
 fn test_parse_one_operand() {
-    use core::{Register, Operand};
+    use core::{Register, Source};
 
-    assert_eq!(parse_one_operand("ACC"), Ok(Operand::Reg(Register::Acc)));
-    assert_eq!(parse_one_operand::<Operand>("bad"), Err(InvalidExpression("bad")));
+    assert_eq!(parse_one_operand("ACC"), Ok(Source::Reg(Register::Acc)));
+    assert_eq!(parse_one_operand::<Source>("bad"), Err(InvalidExpression("bad")));
 }
 
 #[test]
 fn test_parse_two_operands() {
-    use core::{Register, Operand};
+    use core::{Register, Source};
 
-    assert_eq!(parse_two_operands("1", "ACC"), Ok((Operand::Val(1), Operand::Reg(Register::Acc))));
-    assert_eq!(parse_two_operands::<Operand, Operand>("1", "bad"), Err(InvalidExpression("bad")));
-    assert_eq!(parse_two_operands::<Operand, Operand>("bad", "bad"), Err(InvalidExpression("bad")));
+    assert_eq!(parse_two_operands("1", "ACC"), Ok((Source::Val(1), Source::Reg(Register::Acc))));
+    assert_eq!(parse_two_operands::<Source, Register>("1", "bad"), Err(InvalidExpression("bad")));
+    assert_eq!(parse_two_operands::<Source, Register>("bad", "bad"), Err(InvalidExpression("bad")));
 }
 
 #[test]
@@ -203,7 +268,7 @@ fn test_count_operands() {
 
 #[test]
 fn test_parse_instruction() {
-    use core::Operand::*;
+    use core::Source::*;
     use core::Register::*;
 
     let mut labels = HashMap::new();
@@ -252,6 +317,7 @@ fn test_parse_instruction() {
     assert_eq!(parse_instruction("JLZ", "", "", &labels), Err(InvalidInstruction("JLZ", "", "")));
     assert_eq!(parse_instruction("JLZ", "BAD", "", &labels), Err(UndefinedLabel("BAD")));
 
-    assert_eq!(parse_instruction("JRO", "-1", "", &labels), Ok(Jro(-1)));
+    assert_eq!(parse_instruction("JRO", "-1", "", &labels), Ok(Jro(Val(-1))));
+    assert_eq!(parse_instruction("JRO", "ACC", "", &labels), Ok(Jro(Reg(Acc))));
     assert_eq!(parse_instruction("JRO", "", "", &labels), Err(InvalidInstruction("JRO", "", "")));
 }
