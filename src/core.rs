@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 /// A TIS-100 port.
-#[derive(Debug, PartialEq, Copy, Clone, Hash)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash)]
 pub enum Port {
     UP,
     DOWN,
@@ -26,6 +26,26 @@ impl FromStr for Port {
             "RIGHT" => Ok(RIGHT),
             _ => Err(ParsePortError)
         }
+    }
+}
+
+/// Get the opposing direction for a given port.
+///
+/// Example:
+///
+/// ```
+/// use tis_100::core::Port::*;
+/// use tis_100::core::opposite_port;
+///
+/// assert_eq!(opposite_port(UP), DOWN);
+/// assert_eq!(opposite_port(LEFT), RIGHT);
+/// ```
+pub fn opposite_port(port: Port) -> Port {
+    match port {
+        UP => DOWN,
+        DOWN => UP,
+        LEFT => RIGHT,
+        RIGHT => LEFT,
     }
 }
 
@@ -128,11 +148,11 @@ pub enum Instruction {
     Add(Source),
     Sub(Source),
     Neg,
-    Jmp(usize),
-    Jez(usize),
-    Jnz(usize),
-    Jgz(usize),
-    Jlz(usize),
+    Jmp(isize),
+    Jez(isize),
+    Jnz(isize),
+    Jgz(isize),
+    Jlz(isize),
     Jro(Source),
 }
 

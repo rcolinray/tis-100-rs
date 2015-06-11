@@ -1,4 +1,5 @@
 use std::str::FromStr;
+use std::fmt::{Display, Formatter, Error};
 use std::collections::HashMap;
 use core::*;
 use core::Instruction::*;
@@ -15,6 +16,23 @@ pub enum ParseProgramError {
     MissingOperand(String),
     TooManyOperands(String),
 }
+
+impl Display for ParseProgramError {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        match self {
+            &InvalidLabel => f.write_str("invalid label"),
+            &UndefinedLabel(ref lbl) => f.write_fmt(format_args!("undefined label: '{}'", lbl)),
+            &DuplicateLabel(ref lbl) => f.write_fmt(format_args!("label is already defined: '{}'", lbl)),
+            &InvalidOpcode(ref op) => f.write_fmt(format_args!("invalid opcode: '{}'", op)),
+            &InvalidExpression(ref expr) => f.write_fmt(format_args!("invalid expression: '{}'", expr)),
+            &InvalidRegister(ref reg) => f.write_fmt(format_args!("invalid register: '{}'", reg)),
+            &MissingOperand(ref op) => f.write_fmt(format_args!("missing operand: '{}'", op)),
+            &TooManyOperands(ref ops) => f.write_fmt(format_args!("too many operands: '{}'", ops)),
+        }
+    }
+}
+
+pub type ProgramErrors = Vec<(usize, ParseProgramError)>;
 
 use self::ParseProgramError::*;
 
@@ -39,7 +57,7 @@ type ParseResult<T> = Result<T, ParseProgramError>;
 /// assert_eq!(prog[1], Add(VAL(1)));
 /// assert_eq!(prog[2], Mov(REG(ACC), IO(DIR(DOWN))));
 /// ```
-pub fn parse_program(src: &str) -> Result<Vec<Instruction>, Vec<(usize, ParseProgramError)>> {
+pub fn parse_program(src: &str) -> Result<Program, ProgramErrors> {
     let mut label_map = HashMap::new();
     let mut instructions = Vec::new();
     let mut errors = Vec::new();
@@ -51,7 +69,7 @@ pub fn parse_program(src: &str) -> Result<Vec<Instruction>, Vec<(usize, ParsePro
             if name.len() == 0 {
                 errors.push((line_num, InvalidLabel));
             } else if let None = label_map.get(name) {
-                label_map.insert(name.clone(), index);
+                label_map.insert(name.clone(), index as isize);
             } else {
                 errors.push((line_num, DuplicateLabel(name.clone())));
             }
@@ -74,7 +92,7 @@ pub fn parse_program(src: &str) -> Result<Vec<Instruction>, Vec<(usize, ParsePro
     }
 }
 
-fn parse_instruction(opcode: &str, operands: &[String], labels: &HashMap<String, usize>) -> ParseResult<Instruction> {
+fn parse_instruction(opcode: &str, operands: &[String], labels: &HashMap<String, isize>) -> ParseResult<Instruction> {
     match str::parse::<Opcode>(opcode) {
         Ok(NOP) => parse_no_operands(Nop, operands),
         Ok(MOV) => parse_two_operands(Mov, opcode, operands),
@@ -93,11 +111,11 @@ fn parse_instruction(opcode: &str, operands: &[String], labels: &HashMap<String,
     }
 }
 
-fn resolve_label<'a>(label: &str, labels: &'a HashMap<String, usize>) -> ParseResult<&'a usize> {
+fn resolve_label<'a>(label: &str, labels: &'a HashMap<String, isize>) -> ParseResult<&'a isize> {
     labels.get(label).ok_or(UndefinedLabel(label.to_string()))
 }
 
-fn parse_jump<F: Fn(usize) -> Instruction>(f: F, opcode: &str, operands: &[String], labels: &HashMap<String, usize>) -> ParseResult<Instruction> {
+fn parse_jump<F: Fn(isize) -> Instruction>(f: F, opcode: &str, operands: &[String], labels: &HashMap<String, isize>) -> ParseResult<Instruction> {
     if operands.len() < 1 {
         Err(MissingOperand(opcode.to_string()))
     } else if operands.len() == 1 {
