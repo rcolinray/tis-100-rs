@@ -29,32 +29,10 @@ impl FromStr for Port {
 
 /// A TIS-100 port or pseudo-port.
 #[derive(Debug, PartialEq, Copy, Clone)]
-pub enum PseudoPort {
-    Any,
-    Last,
-}
-
-/// An error which can be returned when parsing a psedo-port.
-#[derive(Debug, PartialEq)]
-pub struct ParsePseudoPortError;
-
-impl FromStr for PseudoPort {
-    type Err = ParsePseudoPortError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_uppercase().as_str() {
-            "ANY" => Ok(PseudoPort::Any),
-            "LAST" => Ok(PseudoPort::Last),
-            _ => Err(ParsePseudoPortError)
-        }
-    }
-}
-
-/// A TIS-100 port or pseudo-port.
-#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum IoRegister {
-    PortReg(Port),
-    PseudoReg(PseudoPort),
+    Dir(Port),
+    AnyPort,
+    Last,
 }
 
 /// An error which can be returned when parsing an IO register.
@@ -65,12 +43,14 @@ impl FromStr for IoRegister {
     type Err = ParseIoRegisterError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        if let Ok(port) = str::parse::<Port>(s) {
-            Ok(IoRegister::PortReg(port))
-        } else if let Ok(pseudo) = str::parse::<PseudoPort>(s) {
-            Ok(IoRegister::PseudoReg(pseudo))
-        } else {
-            Err(ParseIoRegisterError)
+        match s.to_uppercase().as_str() {
+            "ANY" => Ok(IoRegister::AnyPort),
+            "LAST" => Ok(IoRegister::Last),
+            _ => if let Ok(port) = str::parse::<Port>(s) {
+                Ok(IoRegister::Dir(port))
+            } else {
+                Err(ParseIoRegisterError)
+            }
         }
     }
 }
@@ -208,17 +188,11 @@ fn test_parse_port() {
 }
 
 #[test]
-fn test_parse_psedo_port() {
-    assert_eq!(str::parse::<PseudoPort>("ANY"), Ok(PseudoPort::Any));
-    assert_eq!(str::parse::<PseudoPort>("any"), Ok(PseudoPort::Any));
-    assert_eq!(str::parse::<PseudoPort>("LAST"), Ok(PseudoPort::Last));
-    assert_eq!(str::parse::<PseudoPort>("bad"), Err(ParsePseudoPortError));
-}
-
-#[test]
 fn test_parse_io_register() {
-    assert_eq!(str::parse::<IoRegister>("UP"), Ok(IoRegister::PortReg(Port::Up)));
-    assert_eq!(str::parse::<IoRegister>("ANY"), Ok(IoRegister::PseudoReg(PseudoPort::Any)));
+    assert_eq!(str::parse::<IoRegister>("UP"), Ok(IoRegister::Dir(Port::Up)));
+    assert_eq!(str::parse::<IoRegister>("ANY"), Ok(IoRegister::AnyPort));
+    assert_eq!(str::parse::<IoRegister>("any"), Ok(IoRegister::AnyPort));
+    assert_eq!(str::parse::<IoRegister>("LAST"), Ok(IoRegister::Last));
     assert_eq!(str::parse::<IoRegister>("bad"), Err(ParseIoRegisterError));
 }
 
@@ -227,7 +201,7 @@ fn test_parse_register() {
     assert_eq!(str::parse::<Register>("ACC"), Ok(Register::Acc));
     assert_eq!(str::parse::<Register>("acc"), Ok(Register::Acc));
     assert_eq!(str::parse::<Register>("NIl"), Ok(Register::Nil));
-    assert_eq!(str::parse::<Register>("UP"), Ok(Register::Io(IoRegister::PortReg(Port::Up))));
+    assert_eq!(str::parse::<Register>("UP"), Ok(Register::Io(IoRegister::Dir(Port::Up))));
     assert_eq!(str::parse::<Register>("bad"), Err(ParseRegisterError));
 }
 

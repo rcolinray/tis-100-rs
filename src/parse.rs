@@ -39,9 +39,9 @@ type ParseResult<'a, T> = Result<T, ParseProgramError<'a>>;
 ///            ADD 1\n
 ///            MOV ACC DOWN\n";
 /// let prog = parse_program(src).unwrap();
-/// assert_eq!(prog[0], Mov(Reg(Io(PortReg(Up))), Acc));
+/// assert_eq!(prog[0], Mov(Reg(Io(Dir(Up))), Acc));
 /// assert_eq!(prog[1], Add(Val(1)));
-/// assert_eq!(prog[2], Mov(Reg(Acc), Io(PortReg(Down))));
+/// assert_eq!(prog[2], Mov(Reg(Acc), Io(Dir(Down))));
 /// ```
 pub fn parse_program<'a>(source: &'a str) -> Result<Program, ErrorList<'a>> {
     // The basic parsing strategy is:
