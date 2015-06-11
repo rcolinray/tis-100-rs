@@ -27,7 +27,6 @@ type ParseResult<'a, T> = Result<T, ParseProgramError<'a>>;
 /// Example:
 ///
 /// ```
-/// use tis_100::core::*;
 /// use tis_100::core::Instruction::*;
 /// use tis_100::core::Source::*;
 /// use tis_100::core::Register::*;
