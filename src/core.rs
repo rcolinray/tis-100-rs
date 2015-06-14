@@ -3,11 +3,13 @@ use std::str::FromStr;
 /// A TIS-100 port.
 #[derive(Debug, PartialEq, Copy, Clone, Hash)]
 pub enum Port {
-    Up,
-    Down,
-    Left,
-    Right,
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT,
 }
+
+use self::Port::*;
 
 /// An error which can be returned when parsing a port.
 #[derive(Debug, PartialEq)]
@@ -17,11 +19,11 @@ impl FromStr for Port {
     type Err = ParsePortError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_uppercase().as_str() {
-            "UP" => Ok(Port::Up),
-            "DOWN" => Ok(Port::Down),
-            "LEFT" => Ok(Port::Left),
-            "RIGHT" => Ok(Port::Right),
+        match s {
+            "UP" => Ok(UP),
+            "DOWN" => Ok(DOWN),
+            "LEFT" => Ok(LEFT),
+            "RIGHT" => Ok(RIGHT),
             _ => Err(ParsePortError)
         }
     }
@@ -30,10 +32,12 @@ impl FromStr for Port {
 /// A TIS-100 port or pseudo-port.
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum IoRegister {
-    Dir(Port),
-    AnyPort,
-    Last,
+    DIR(Port),
+    ANY,
+    LAST,
 }
+
+use self::IoRegister::*;
 
 /// An error which can be returned when parsing an IO register.
 #[derive(Debug, PartialEq)]
@@ -43,11 +47,11 @@ impl FromStr for IoRegister {
     type Err = ParseIoRegisterError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_uppercase().as_str() {
-            "ANY" => Ok(IoRegister::AnyPort),
-            "LAST" => Ok(IoRegister::Last),
+        match s {
+            "ANY" => Ok(ANY),
+            "LAST" => Ok(LAST),
             _ => if let Ok(port) = str::parse::<Port>(s) {
-                Ok(IoRegister::Dir(port))
+                Ok(DIR(port))
             } else {
                 Err(ParseIoRegisterError)
             }
@@ -58,10 +62,12 @@ impl FromStr for IoRegister {
 /// A TIS-100 register.
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Register {
-    Acc,
-    Nil,
-    Io(IoRegister),
+    ACC,
+    NIL,
+    IO(IoRegister),
 }
+
+use self::Register::*;
 
 /// An error which can be returned when parsing a register.
 #[derive(Debug, PartialEq)]
@@ -71,12 +77,12 @@ impl FromStr for Register {
     type Err = ParseRegisterError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_uppercase().as_str() {
-            "ACC" => Ok(Register::Acc),
-            "NIL" => Ok(Register::Nil),
+        match s {
+            "ACC" => Ok(ACC),
+            "NIL" => Ok(NIL),
             _ => {
                 if let Ok(reg) = str::parse::<IoRegister>(s) {
-                    Ok(Register::Io(reg))
+                    Ok(IO(reg))
                 } else {
                     Err(ParseRegisterError)
                 }
@@ -88,9 +94,11 @@ impl FromStr for Register {
 /// The source component of a TIS-100 instruction.
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Source {
-    Val(isize),
-    Reg(Register),
+    VAL(isize),
+    REG(Register),
 }
+
+use self::Source::*;
 
 /// An error which can be returned when parsing an source.
 #[derive(Debug, PartialEq)]
@@ -101,9 +109,9 @@ impl FromStr for Source {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Ok(val) = str::parse::<isize>(s) {
-            Ok(Source::Val(val))
+            Ok(VAL(val))
         } else if let Ok(register) = str::parse::<Register>(s) {
-            Ok(Source::Reg(register))
+            Ok(REG(register))
         } else {
             Err(ParseSourceError)
         }
@@ -134,35 +142,35 @@ pub type Program = Vec<Instruction>;
 
 #[test]
 fn test_parse_port() {
-    assert_eq!(str::parse::<Port>("UP"), Ok(Port::Up));
-    assert_eq!(str::parse::<Port>("up"), Ok(Port::Up));
-    assert_eq!(str::parse::<Port>("DOWN"), Ok(Port::Down));
-    assert_eq!(str::parse::<Port>("LEFT"), Ok(Port::Left));
-    assert_eq!(str::parse::<Port>("RIGHT"), Ok(Port::Right));
+    assert_eq!(str::parse::<Port>("UP"), Ok(UP));
+    assert_eq!(str::parse::<Port>("DOWN"), Ok(DOWN));
+    assert_eq!(str::parse::<Port>("LEFT"), Ok(LEFT));
+    assert_eq!(str::parse::<Port>("RIGHT"), Ok(RIGHT));
+    assert_eq!(str::parse::<Port>("up"), Err(ParsePortError));
     assert_eq!(str::parse::<Port>("bad"), Err(ParsePortError));
 }
 
 #[test]
 fn test_parse_io_register() {
-    assert_eq!(str::parse::<IoRegister>("UP"), Ok(IoRegister::Dir(Port::Up)));
-    assert_eq!(str::parse::<IoRegister>("ANY"), Ok(IoRegister::AnyPort));
-    assert_eq!(str::parse::<IoRegister>("any"), Ok(IoRegister::AnyPort));
-    assert_eq!(str::parse::<IoRegister>("LAST"), Ok(IoRegister::Last));
+    assert_eq!(str::parse::<IoRegister>("UP"), Ok(DIR(UP)));
+    assert_eq!(str::parse::<IoRegister>("ANY"), Ok(ANY));
+    assert_eq!(str::parse::<IoRegister>("LAST"), Ok(LAST));
+    assert_eq!(str::parse::<IoRegister>("any"), Err(ParseIoRegisterError));
     assert_eq!(str::parse::<IoRegister>("bad"), Err(ParseIoRegisterError));
 }
 
 #[test]
 fn test_parse_register() {
-    assert_eq!(str::parse::<Register>("ACC"), Ok(Register::Acc));
-    assert_eq!(str::parse::<Register>("acc"), Ok(Register::Acc));
-    assert_eq!(str::parse::<Register>("NIl"), Ok(Register::Nil));
-    assert_eq!(str::parse::<Register>("UP"), Ok(Register::Io(IoRegister::Dir(Port::Up))));
+    assert_eq!(str::parse::<Register>("ACC"), Ok(ACC));
+    assert_eq!(str::parse::<Register>("NIL"), Ok(NIL));
+    assert_eq!(str::parse::<Register>("UP"), Ok(IO(DIR(UP))));
+    assert_eq!(str::parse::<Register>("acc"), Err(ParseRegisterError));
     assert_eq!(str::parse::<Register>("bad"), Err(ParseRegisterError));
 }
 
 #[test]
 fn test_parse_source() {
-    assert_eq!(str::parse::<Source>("ACC"), Ok(Source::Reg(Register::Acc)));
-    assert_eq!(str::parse::<Source>("1"), Ok(Source::Val(1)));
+    assert_eq!(str::parse::<Source>("ACC"), Ok(REG(ACC)));
+    assert_eq!(str::parse::<Source>("1"), Ok(VAL(1)));
     assert_eq!(str::parse::<Source>("bad"), Err(ParseSourceError));
 }
