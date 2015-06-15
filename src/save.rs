@@ -56,6 +56,7 @@ fn parse_save(src: &str) -> Result<Save, SaveErrors> {
                 .ok();
         } else if num != None {
             prog_src.push_str(line);
+            prog_src.push('\n');
         }
     }
 
