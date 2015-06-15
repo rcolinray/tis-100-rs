@@ -148,7 +148,7 @@ fn parse_one_operand<T: FromStr, F: Fn(T) -> Instruction>(f: F, opcode: &str, op
 
 fn parse_two_operands<T: FromStr, U: FromStr, F: Fn(T, U) -> Instruction>(f: F, opcode: &str, operands: &[String]) -> ParseResult<Instruction> {
     if operands.len() < 2 {
-        Err(MissingOperand(opcode.to_string() + &operands.connect(" ")))
+        Err(MissingOperand(opcode.to_string() + " " + &operands.connect(" ")))
     } else if operands.len() == 2 {
         match str::parse::<T>(&operands[0]) {
             Ok(op1) => match str::parse::<U>(&operands[1]) {
