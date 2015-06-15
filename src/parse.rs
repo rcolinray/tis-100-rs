@@ -1,28 +1,42 @@
-use std::collections::HashMap;
 use std::str::FromStr;
-use core::{Opcode, Instruction};
+use std::fmt::{Display, Formatter, Error};
+use std::collections::HashMap;
+use core::*;
 use core::Instruction::*;
+use lex::{lex_program, Label, Line};
 
-/// An error which can be returned when parsing a TIS-100 program.
 #[derive(Debug, PartialEq)]
-pub enum ParseProgramError<'a> {
-    InvalidSyntax(&'a str),
-    UndefinedLabel(&'a str),
-    DuplicateLabel(&'a str),
-    InvalidOpcode(&'a str),
-    InvalidExpression(&'a str),
-    InvalidInstruction(&'a str, &'a str, &'a str),
+pub enum ParseProgramError {
+    InvalidLabel,
+    UndefinedLabel(String),
+    DuplicateLabel(String),
+    InvalidOpcode(String),
+    InvalidExpression(String),
+    InvalidRegister(String),
+    MissingOperand(String),
+    TooManyOperands(String),
 }
+
+impl Display for ParseProgramError {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+        match self {
+            &InvalidLabel => f.write_str("invalid label"),
+            &UndefinedLabel(ref lbl) => f.write_fmt(format_args!("undefined label: '{}'", lbl)),
+            &DuplicateLabel(ref lbl) => f.write_fmt(format_args!("label is already defined: '{}'", lbl)),
+            &InvalidOpcode(ref op) => f.write_fmt(format_args!("invalid opcode: '{}'", op)),
+            &InvalidExpression(ref expr) => f.write_fmt(format_args!("invalid expression: '{}'", expr)),
+            &InvalidRegister(ref reg) => f.write_fmt(format_args!("invalid register: '{}'", reg)),
+            &MissingOperand(ref op) => f.write_fmt(format_args!("missing operand: '{}'", op)),
+            &TooManyOperands(ref ops) => f.write_fmt(format_args!("too many operands: '{}'", ops)),
+        }
+    }
+}
+
+pub type ProgramErrors = Vec<(usize, ParseProgramError)>;
 
 use self::ParseProgramError::*;
 
-/// The list of errors encountered while parsing the program source code.
-pub type ErrorList<'a> = Vec<ParseProgramError<'a>>;
-
-/// The list of instructions created by parsing the program source code.
-pub type Program = Vec<Instruction>;
-
-type ParseResult<'a, T> = Result<T, ParseProgramError<'a>>;
+type ParseResult<T> = Result<T, ParseProgramError>;
 
 /// Parse the program source code into a list of instructions. If one or more errors are
 /// encountered during parsing, then the list of errors will be returned instead.
@@ -30,68 +44,44 @@ type ParseResult<'a, T> = Result<T, ParseProgramError<'a>>;
 /// Example:
 ///
 /// ```
-/// use tis_100::core::*;
 /// use tis_100::core::Instruction::*;
-/// use tis_100::core::Operand::*;
+/// use tis_100::core::Source::*;
 /// use tis_100::core::Register::*;
+/// use tis_100::core::IoRegister::*;
 /// use tis_100::core::Port::*;
 /// use tis_100::parse::parse_program;
 ///
-/// let src = "MOV UP ACC\n
-///            ADD 1\n
-///            MOV ACC DOWN\n";
+/// let src = "MOV UP ACC\nADD 1\nMOV ACC DOWN\n";
 /// let prog = parse_program(src).unwrap();
-/// assert_eq!(prog[0], Mov(Reg(Io(Up)), Acc));
-/// assert_eq!(prog[1], Add(Val(1)));
-/// assert_eq!(prog[2], Mov(Reg(Acc), Io(Down)));
+/// assert_eq!(prog[0], Mov(REG(IO(DIR(UP))), ACC));
+/// assert_eq!(prog[1], Add(VAL(1)));
+/// assert_eq!(prog[2], Mov(REG(ACC), IO(DIR(DOWN))));
 /// ```
-pub fn parse_program<'a>(source: &'a str) -> Result<Program, ErrorList<'a>> {
-    // The basic parsing strategy is:
-    // 1. Tokenize the input using a regex.
-    // 2. Store the location of each label.
-    // 3. Parse each instruction and resolve labels.
-
-    let re = regex!(r"^,* *(?:(\w+):)?,* *(?:(\w+))?,* *(?:(\w+))?,* *(?:(\w+))?,* *(?:#.*)?$");
-
-    let mut line_captures = Vec::new();
-    let mut errors = Vec::new();
-    let mut labels = HashMap::new();
+pub fn parse_program(src: &str) -> Result<Program, ProgramErrors> {
+    let mut label_map = HashMap::new();
     let mut instructions = Vec::new();
+    let mut errors = Vec::new();
 
-    // Label pass
-    let mut next_idx = 0;
-    for line in source.lines() {
-        if let Some(captures) = re.captures(line) {
-            if let Some(label) = captures.at(1) {
-                if let None = labels.get(label) {
-                    labels.insert(label, next_idx);
-                } else {
-                    errors.push(DuplicateLabel(label));
-                }
+    let lines = lex_program(src);
+
+    for &Line(line_num, ref maybe_label, _) in lines.iter() {
+        if let &Some(Label(ref name, index)) = maybe_label {
+            if name.len() == 0 {
+                errors.push((line_num, InvalidLabel));
+            } else if let None = label_map.get(name) {
+                label_map.insert(name.clone(), index as isize);
+            } else {
+                errors.push((line_num, DuplicateLabel(name.clone())));
             }
-
-            // If we find an opcode, then increment the next index that the next label should
-            // refer to.
-            if let Some(_) = captures.at(2) {
-                next_idx += 1;
-            }
-
-            line_captures.push(captures);
-        } else {
-            errors.push(InvalidSyntax(line));
         }
     }
 
-    // Instruction pass
-    for captures in line_captures.iter() {
-        if let Some(opcode) = captures.at(2) {
-            let operand1 = captures.at(3).unwrap_or("");
-            let operand2 = captures.at(4).unwrap_or("");
-
-            match parse_instruction(opcode, operand1, operand2, &labels) {
+    for &Line(line_num, _, ref lexemes) in lines.iter() {
+        if lexemes.len() > 0 {
+            match parse_instruction(&lexemes[0], &lexemes[1..], &label_map) {
                 Ok(instruction) => instructions.push(instruction),
-                Err(error) => errors.push(error),
-            };
+                Err(err) => errors.push((line_num, err)),
+            }
         }
     }
 
@@ -102,159 +92,138 @@ pub fn parse_program<'a>(source: &'a str) -> Result<Program, ErrorList<'a>> {
     }
 }
 
-/// Attempt to parse an instruction given an opcode, two operands, and a map of labels.
-fn parse_instruction<'a>(opcode: &'a str, operand1: &'a str, operand2: &'a str, labels: &HashMap<&'a str, usize>) -> ParseResult<'a, Instruction> {
-    let num_ops = count_operands(operand1, operand2);
+fn parse_instruction(opcode: &str, operands: &[String], labels: &HashMap<String, isize>) -> ParseResult<Instruction> {
     match str::parse::<Opcode>(opcode) {
-        Ok(code) => {
-            match code {
-                Opcode::Nop if num_ops == 0 => Ok(Nop),
-                Opcode::Mov if num_ops == 2 => parse_two_operands(operand1, operand2).and_then(|(op1, op2)| { Ok(Mov(op1, op2)) }),
-                Opcode::Swp if num_ops == 0 => Ok(Swp),
-                Opcode::Sav if num_ops == 0 => Ok(Sav),
-                Opcode::Add if num_ops == 1 => parse_one_operand(operand1).and_then(|op| { Ok(Add(op)) }),
-                Opcode::Sub if num_ops == 1 => parse_one_operand(operand1).and_then(|op| { Ok(Sub(op)) }),
-                Opcode::Neg if num_ops == 0 => Ok(Neg),
-                Opcode::Jmp if num_ops == 1 => resolve_jump_label(operand1, labels, Jmp),
-                Opcode::Jez if num_ops == 1 => resolve_jump_label(operand1, labels, Jez),
-                Opcode::Jnz if num_ops == 1 => resolve_jump_label(operand1, labels, Jnz),
-                Opcode::Jgz if num_ops == 1 => resolve_jump_label(operand1, labels, Jgz),
-                Opcode::Jlz if num_ops == 1 => resolve_jump_label(operand1, labels, Jlz),
-                Opcode::Jro if num_ops == 1 => parse_one_operand(operand1).and_then(|op| { Ok(Jro(op)) }),
-                _ => Err(InvalidInstruction(opcode, operand1, operand2)),
-            }
-        },
-        Err(_) => Err(InvalidOpcode(opcode)),
+        Ok(NOP) => parse_no_operands(Nop, operands),
+        Ok(MOV) => parse_two_operands(Mov, opcode, operands),
+        Ok(SWP) => parse_no_operands(Swp, operands),
+        Ok(SAV) => parse_no_operands(Sav, operands),
+        Ok(ADD) => parse_one_operand(Add, opcode, operands),
+        Ok(SUB) => parse_one_operand(Sub, opcode, operands),
+        Ok(NEG) => parse_no_operands(Neg, operands),
+        Ok(JMP) => parse_jump(Jmp, opcode, operands, labels),
+        Ok(JEZ) => parse_jump(Jez, opcode, operands, labels),
+        Ok(JNZ) => parse_jump(Jnz, opcode, operands, labels),
+        Ok(JGZ) => parse_jump(Jgz, opcode, operands, labels),
+        Ok(JLZ) => parse_jump(Jlz, opcode, operands, labels),
+        Ok(JRO) => parse_one_operand(Jro, opcode, operands),
+        _ => Err(InvalidOpcode(opcode.to_string())),
     }
 }
 
-/// A helper function to count the number of operands.
-fn count_operands(op1: &str, op2: &str) -> usize {
-    let mut num_ops = 0;
-
-    if op1.len() > 0 {
-        num_ops += 1;
-    }
-
-    if op2.len() > 0 {
-        num_ops += 1;
-    }
-
-    return num_ops;
+fn resolve_label<'a>(label: &str, labels: &'a HashMap<String, isize>) -> ParseResult<&'a isize> {
+    labels.get(label).ok_or(UndefinedLabel(label.to_string()))
 }
 
-/// Look up the index for a label and create a jump instruction if the label is found.
-fn resolve_jump_label<'a, F: Fn(usize) -> Instruction>(label: &'a str, labels: &HashMap<&str, usize>, f: F) -> ParseResult<'a, Instruction> {
-    labels.get(label)
-        .ok_or(UndefinedLabel(label))
-        .map(|&i| { f(i) })
-}
-
-/// Attempt to parse an operand from a string.
-fn parse_one_operand<'a, T: FromStr>(operand: &'a str) -> ParseResult<'a, T> {
-    match str::parse::<T>(operand) {
-        Ok(op) => Ok(op),
-        Err(_) => Err(InvalidExpression(operand)),
+fn parse_jump<F: Fn(isize) -> Instruction>(f: F, opcode: &str, operands: &[String], labels: &HashMap<String, isize>) -> ParseResult<Instruction> {
+    if operands.len() < 1 {
+        Err(MissingOperand(opcode.to_string()))
+    } else if operands.len() == 1 {
+        resolve_label(&operands[0], labels).map(|&i| f(i))
+    } else {
+        Err(TooManyOperands(operands[1..].connect(" ")))
     }
 }
 
-/// Attempt to parse two operands from a string.
-fn parse_two_operands<'a, T: FromStr, U: FromStr>(operand1: &'a str, operand2: &'a str) -> ParseResult<'a, (T, U)> {
-    match str::parse::<T>(operand1) {
-        Ok(op1) => {
-            match str::parse::<U>(operand2) {
-                Ok(op2) => Ok((op1, op2)),
-                Err(_) => Err(InvalidExpression(operand2)),
-            }
-        },
-        Err(_) => Err(InvalidExpression(operand1)),
+fn parse_no_operands(instruction: Instruction, operands: &[String]) -> ParseResult<Instruction> {
+    if operands.len() == 0 {
+        Ok(instruction)
+    } else {
+        Err(TooManyOperands(operands.connect(" ")))
+    }
+}
+
+fn parse_one_operand<T: FromStr, F: Fn(T) -> Instruction>(f: F, opcode: &str, operands: &[String]) -> ParseResult<Instruction> {
+    if operands.len() < 1 {
+        Err(MissingOperand(opcode.to_string()))
+    } else if operands.len() == 1 {
+        match str::parse::<T>(&operands[0]) {
+            Ok(op) => Ok(f(op)),
+            Err(_) => Err(InvalidExpression(operands[0].clone())),
+        }
+    } else {
+        Err(TooManyOperands(operands[1..].connect(" ")))
+    }
+}
+
+fn parse_two_operands<T: FromStr, U: FromStr, F: Fn(T, U) -> Instruction>(f: F, opcode: &str, operands: &[String]) -> ParseResult<Instruction> {
+    if operands.len() < 2 {
+        Err(MissingOperand(opcode.to_string() + &operands.connect(" ")))
+    } else if operands.len() == 2 {
+        match str::parse::<T>(&operands[0]) {
+            Ok(op1) => match str::parse::<U>(&operands[1]) {
+                Ok(op2) => Ok(f(op1, op2)),
+                Err(_) => Err(InvalidRegister(operands[1].clone())),
+            },
+            Err(_) => Err(InvalidExpression(operands[0].clone())),
+        }
+    } else {
+        Err(TooManyOperands(operands[2..].connect(" ")))
+    }
+}
+
+/// The opcode component of a TIS-100 instruction.
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum Opcode {
+    NOP,
+    MOV,
+    SWP,
+    SAV,
+    ADD,
+    SUB,
+    NEG,
+    JMP,
+    JEZ,
+    JNZ,
+    JGZ,
+    JLZ,
+    JRO,
+}
+
+use self::Opcode::*;
+
+/// An error which can be returned when parsing an opcode.
+#[derive(Debug, PartialEq)]
+pub struct ParseOpcodeError;
+
+impl FromStr for Opcode {
+    type Err = ParseOpcodeError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "NOP" => Ok(NOP),
+            "MOV" => Ok(MOV),
+            "SWP" => Ok(SWP),
+            "SAV" => Ok(SAV),
+            "ADD" => Ok(ADD),
+            "SUB" => Ok(SUB),
+            "NEG" => Ok(NEG),
+            "JMP" => Ok(JMP),
+            "JEZ" => Ok(JEZ),
+            "JNZ" => Ok(JNZ),
+            "JGZ" => Ok(JGZ),
+            "JLZ" => Ok(JLZ),
+            "JRO" => Ok(JRO),
+            _ => Err(ParseOpcodeError),
+        }
     }
 }
 
 #[test]
-fn test_parse_one_operand() {
-    use core::{Register, Operand};
-
-    assert_eq!(parse_one_operand("ACC"), Ok(Operand::Reg(Register::Acc)));
-    assert_eq!(parse_one_operand::<Operand>("bad"), Err(InvalidExpression("bad")));
-}
-
-#[test]
-fn test_parse_two_operands() {
-    use core::{Register, Operand};
-
-    assert_eq!(parse_two_operands("1", "ACC"), Ok((Operand::Val(1), Operand::Reg(Register::Acc))));
-    assert_eq!(parse_two_operands::<Operand, Operand>("1", "bad"), Err(InvalidExpression("bad")));
-    assert_eq!(parse_two_operands::<Operand, Operand>("bad", "bad"), Err(InvalidExpression("bad")));
-}
-
-#[test]
-fn test_resolve_jump_label() {
-    let mut labels = HashMap::new();
-    labels.insert("good", 1);
-
-    assert_eq!(resolve_jump_label("good", &labels, Jmp), Ok(Jmp(1)));
-    assert_eq!(resolve_jump_label("bad", &labels, Jmp), Err(UndefinedLabel("bad")));
-}
-
-#[test]
-fn test_count_operands() {
-    assert_eq!(count_operands("", ""), 0);
-    assert_eq!(count_operands("ACC", ""), 1);
-    assert_eq!(count_operands("ACC", "BAK"), 2);
-}
-
-#[test]
-fn test_parse_instruction() {
-    use core::Operand::*;
-    use core::Register::*;
-
-    let mut labels = HashMap::new();
-    labels.insert("TEST", 0);
-
-    assert_eq!(parse_instruction("BAD", "", "", &labels), Err(InvalidOpcode("BAD")));
-
-    assert_eq!(parse_instruction("NOP", "", "", &labels), Ok(Nop));
-    assert_eq!(parse_instruction("NOP", "bad", "", &labels), Err(InvalidInstruction("NOP", "bad", "")));
-
-    assert_eq!(parse_instruction("MOV", "1", "ACC", &labels), Ok(Mov(Val(1), Acc)));
-    assert_eq!(parse_instruction("MOV", "", "", &labels), Err(InvalidInstruction("MOV", "", "")));
-
-    assert_eq!(parse_instruction("SWP", "", "", &labels), Ok(Swp));
-    assert_eq!(parse_instruction("SWP", "bad", "", &labels), Err(InvalidInstruction("SWP", "bad", "")));
-
-    assert_eq!(parse_instruction("SAV", "", "", &labels), Ok(Sav));
-    assert_eq!(parse_instruction("SAV", "bad", "", &labels), Err(InvalidInstruction("SAV", "bad", "")));
-
-    assert_eq!(parse_instruction("ADD", "1", "", &labels), Ok(Add(Val(1))));
-    assert_eq!(parse_instruction("ADD", "", "", &labels), Err(InvalidInstruction("ADD", "", "")));
-
-    assert_eq!(parse_instruction("SUB", "1", "", &labels), Ok(Sub(Val(1))));
-    assert_eq!(parse_instruction("SUB", "", "", &labels), Err(InvalidInstruction("SUB", "", "")));
-
-    assert_eq!(parse_instruction("NEG", "", "", &labels), Ok(Neg));
-    assert_eq!(parse_instruction("NEG", "bad", "", &labels), Err(InvalidInstruction("NEG", "bad", "")));
-
-    assert_eq!(parse_instruction("JMP", "TEST", "", &labels), Ok(Jmp(0)));
-    assert_eq!(parse_instruction("JMP", "", "", &labels), Err(InvalidInstruction("JMP", "", "")));
-    assert_eq!(parse_instruction("JMP", "BAD", "", &labels), Err(UndefinedLabel("BAD")));
-
-    assert_eq!(parse_instruction("JEZ", "TEST", "", &labels), Ok(Jez(0)));
-    assert_eq!(parse_instruction("JEZ", "", "", &labels), Err(InvalidInstruction("JEZ", "", "")));
-    assert_eq!(parse_instruction("JEZ", "BAD", "", &labels), Err(UndefinedLabel("BAD")));
-
-    assert_eq!(parse_instruction("JNZ", "TEST", "", &labels), Ok(Jnz(0)));
-    assert_eq!(parse_instruction("JNZ", "", "", &labels), Err(InvalidInstruction("JNZ", "", "")));
-    assert_eq!(parse_instruction("JNZ", "BAD", "", &labels), Err(UndefinedLabel("BAD")));
-
-    assert_eq!(parse_instruction("JGZ", "TEST", "", &labels), Ok(Jgz(0)));
-    assert_eq!(parse_instruction("JGZ", "", "", &labels), Err(InvalidInstruction("JGZ", "", "")));
-    assert_eq!(parse_instruction("JGZ", "BAD", "", &labels), Err(UndefinedLabel("BAD")));
-
-    assert_eq!(parse_instruction("JLZ", "TEST", "", &labels), Ok(Jlz(0)));
-    assert_eq!(parse_instruction("JLZ", "", "", &labels), Err(InvalidInstruction("JLZ", "", "")));
-    assert_eq!(parse_instruction("JLZ", "BAD", "", &labels), Err(UndefinedLabel("BAD")));
-
-    assert_eq!(parse_instruction("JRO", "-1", "", &labels), Ok(Jro(-1)));
-    assert_eq!(parse_instruction("JRO", "", "", &labels), Err(InvalidInstruction("JRO", "", "")));
+fn test_parse_opcode() {
+    assert_eq!(str::parse::<Opcode>("NOP"), Ok(NOP));
+    assert_eq!(str::parse::<Opcode>("MOV"), Ok(MOV));
+    assert_eq!(str::parse::<Opcode>("SWP"), Ok(SWP));
+    assert_eq!(str::parse::<Opcode>("SAV"), Ok(SAV));
+    assert_eq!(str::parse::<Opcode>("ADD"), Ok(ADD));
+    assert_eq!(str::parse::<Opcode>("SUB"), Ok(SUB));
+    assert_eq!(str::parse::<Opcode>("NEG"), Ok(NEG));
+    assert_eq!(str::parse::<Opcode>("JMP"), Ok(JMP));
+    assert_eq!(str::parse::<Opcode>("JEZ"), Ok(JEZ));
+    assert_eq!(str::parse::<Opcode>("JNZ"), Ok(JNZ));
+    assert_eq!(str::parse::<Opcode>("JGZ"), Ok(JGZ));
+    assert_eq!(str::parse::<Opcode>("JLZ"), Ok(JLZ));
+    assert_eq!(str::parse::<Opcode>("JRO"), Ok(JRO));
+    assert_eq!(str::parse::<Opcode>("nop"), Err(ParseOpcodeError));
+    assert_eq!(str::parse::<Opcode>("bad"), Err(ParseOpcodeError));
 }

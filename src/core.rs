@@ -1,15 +1,15 @@
 use std::str::FromStr;
 
 /// A TIS-100 port.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash)]
 pub enum Port {
-    Up,
-    Down,
-    Left,
-    Right,
-    Any,
-    Last,
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT,
 }
+
+use self::Port::*;
 
 /// An error which can be returned when parsing a port.
 #[derive(Debug, PartialEq)]
@@ -19,26 +19,75 @@ impl FromStr for Port {
     type Err = ParsePortError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_uppercase().as_str() {
-            "UP" => Ok(Port::Up),
-            "DOWN" => Ok(Port::Down),
-            "LEFT" => Ok(Port::Left),
-            "RIGHT" => Ok(Port::Right),
-            "ANY" => Ok(Port::Any),
-            "LAST" => Ok(Port::Last),
+        match s {
+            "UP" => Ok(UP),
+            "DOWN" => Ok(DOWN),
+            "LEFT" => Ok(LEFT),
+            "RIGHT" => Ok(RIGHT),
             _ => Err(ParsePortError)
         }
     }
 }
 
-/// A TIS-100 register.
-#[derive(Debug, PartialEq)]
-pub enum Register {
-    Acc,
-    Bak,
-    Nil,
-    Io(Port),
+/// Get the opposing direction for a given port.
+///
+/// Example:
+///
+/// ```
+/// use tis_100::core::Port::*;
+/// use tis_100::core::opposite_port;
+///
+/// assert_eq!(opposite_port(UP), DOWN);
+/// assert_eq!(opposite_port(LEFT), RIGHT);
+/// ```
+pub fn opposite_port(port: Port) -> Port {
+    match port {
+        UP => DOWN,
+        DOWN => UP,
+        LEFT => RIGHT,
+        RIGHT => LEFT,
+    }
 }
+
+/// A TIS-100 port or pseudo-port.
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum IoRegister {
+    DIR(Port),
+    ANY,
+    LAST,
+}
+
+use self::IoRegister::*;
+
+/// An error which can be returned when parsing an IO register.
+#[derive(Debug, PartialEq)]
+pub struct ParseIoRegisterError;
+
+impl FromStr for IoRegister {
+    type Err = ParseIoRegisterError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "ANY" => Ok(ANY),
+            "LAST" => Ok(LAST),
+            _ => if let Ok(port) = str::parse::<Port>(s) {
+                Ok(DIR(port))
+            } else {
+                Err(ParseIoRegisterError)
+            }
+        }
+    }
+}
+
+/// A TIS-100 register.
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum Register {
+    ACC,
+    NIL,
+    IO(IoRegister),
+}
+
+use self::Register::*;
 
 /// An error which can be returned when parsing a register.
 #[derive(Debug, PartialEq)]
@@ -48,13 +97,12 @@ impl FromStr for Register {
     type Err = ParseRegisterError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_uppercase().as_str() {
-            "ACC" => Ok(Register::Acc),
-            "BAK" => Ok(Register::Bak),
-            "NIL" => Ok(Register::Nil),
+        match s {
+            "ACC" => Ok(ACC),
+            "NIL" => Ok(NIL),
             _ => {
-                if let Ok(port) = str::parse::<Port>(s) {
-                    Ok(Register::Io(port))
+                if let Ok(reg) = str::parse::<IoRegister>(s) {
+                    Ok(IO(reg))
                 } else {
                     Err(ParseRegisterError)
                 }
@@ -63,138 +111,86 @@ impl FromStr for Register {
     }
 }
 
-/// The operand component of a TIS-100 instruction.
-#[derive(Debug, PartialEq)]
-pub enum Operand {
-    Val(isize),
-    Reg(Register),
+/// The source component of a TIS-100 instruction.
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum Source {
+    VAL(isize),
+    REG(Register),
 }
 
-/// An error which can be returned when parsing an operand.
-#[derive(Debug, PartialEq)]
-pub struct ParseOperandError;
+use self::Source::*;
 
-impl FromStr for Operand {
-    type Err = ParseOperandError;
+/// An error which can be returned when parsing an source.
+#[derive(Debug, PartialEq)]
+pub struct ParseSourceError;
+
+impl FromStr for Source {
+    type Err = ParseSourceError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Ok(val) = str::parse::<isize>(s) {
-            Ok(Operand::Val(val))
+            Ok(VAL(val))
         } else if let Ok(register) = str::parse::<Register>(s) {
-            Ok(Operand::Reg(register))
+            Ok(REG(register))
         } else {
-            Err(ParseOperandError)
-        }
-    }
-}
-
-/// The opcode component of a TIS-100 instruction.
-#[derive(Debug, PartialEq)]
-pub enum Opcode {
-    Nop,
-    Mov,
-    Swp,
-    Sav,
-    Add,
-    Sub,
-    Neg,
-    Jmp,
-    Jez,
-    Jnz,
-    Jgz,
-    Jlz,
-    Jro,
-}
-
-/// An error which can be returned when parsing an opcode.
-#[derive(Debug, PartialEq)]
-pub struct ParseOpcodeError;
-
-impl FromStr for Opcode {
-    type Err = ParseOpcodeError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_uppercase().as_str() {
-            "NOP" => Ok(Opcode::Nop),
-            "MOV" => Ok(Opcode::Mov),
-            "SWP" => Ok(Opcode::Swp),
-            "SAV" => Ok(Opcode::Sav),
-            "ADD" => Ok(Opcode::Add),
-            "SUB" => Ok(Opcode::Sub),
-            "NEG" => Ok(Opcode::Neg),
-            "JMP" => Ok(Opcode::Jmp),
-            "JEZ" => Ok(Opcode::Jez),
-            "JNZ" => Ok(Opcode::Jnz),
-            "JGZ" => Ok(Opcode::Jgz),
-            "JLZ" => Ok(Opcode::Jlz),
-            "JRO" => Ok(Opcode::Jro),
-            _ => Err(ParseOpcodeError),
+            Err(ParseSourceError)
         }
     }
 }
 
 /// A valid TIS-100 instruction.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Instruction {
     Nop,
-    Mov(Operand, Register),
+    Mov(Source, Register),
     Swp,
     Sav,
-    Add(Operand),
-    Sub(Operand),
+    Add(Source),
+    Sub(Source),
     Neg,
-    Jmp(usize),
-    Jez(usize),
-    Jnz(usize),
-    Jgz(usize),
-    Jlz(usize),
-    Jro(isize),
+    Jmp(isize),
+    Jez(isize),
+    Jnz(isize),
+    Jgz(isize),
+    Jlz(isize),
+    Jro(Source),
 }
+
+/// The list of instructions created by parsing the program source code. The
+/// instructions can then be evaluated by a basic execution node.
+pub type Program = Vec<Instruction>;
 
 #[test]
 fn test_parse_port() {
-    assert_eq!(str::parse::<Port>("UP"), Ok(Port::Up));
-    assert_eq!(str::parse::<Port>("up"), Ok(Port::Up));
-    assert_eq!(str::parse::<Port>("DOWN"), Ok(Port::Down));
-    assert_eq!(str::parse::<Port>("LEFT"), Ok(Port::Left));
-    assert_eq!(str::parse::<Port>("RIGHT"), Ok(Port::Right));
-    assert_eq!(str::parse::<Port>("ANY"), Ok(Port::Any));
-    assert_eq!(str::parse::<Port>("LAST"), Ok(Port::Last));
+    assert_eq!(str::parse::<Port>("UP"), Ok(UP));
+    assert_eq!(str::parse::<Port>("DOWN"), Ok(DOWN));
+    assert_eq!(str::parse::<Port>("LEFT"), Ok(LEFT));
+    assert_eq!(str::parse::<Port>("RIGHT"), Ok(RIGHT));
+    assert_eq!(str::parse::<Port>("up"), Err(ParsePortError));
     assert_eq!(str::parse::<Port>("bad"), Err(ParsePortError));
 }
 
 #[test]
+fn test_parse_io_register() {
+    assert_eq!(str::parse::<IoRegister>("UP"), Ok(DIR(UP)));
+    assert_eq!(str::parse::<IoRegister>("ANY"), Ok(ANY));
+    assert_eq!(str::parse::<IoRegister>("LAST"), Ok(LAST));
+    assert_eq!(str::parse::<IoRegister>("any"), Err(ParseIoRegisterError));
+    assert_eq!(str::parse::<IoRegister>("bad"), Err(ParseIoRegisterError));
+}
+
+#[test]
 fn test_parse_register() {
-    assert_eq!(str::parse::<Register>("ACC"), Ok(Register::Acc));
-    assert_eq!(str::parse::<Register>("acc"), Ok(Register::Acc));
-    assert_eq!(str::parse::<Register>("BAK"), Ok(Register::Bak));
-    assert_eq!(str::parse::<Register>("NIl"), Ok(Register::Nil));
-    assert_eq!(str::parse::<Register>("UP"), Ok(Register::Io(Port::Up)));
+    assert_eq!(str::parse::<Register>("ACC"), Ok(ACC));
+    assert_eq!(str::parse::<Register>("NIL"), Ok(NIL));
+    assert_eq!(str::parse::<Register>("UP"), Ok(IO(DIR(UP))));
+    assert_eq!(str::parse::<Register>("acc"), Err(ParseRegisterError));
     assert_eq!(str::parse::<Register>("bad"), Err(ParseRegisterError));
 }
 
 #[test]
-fn test_parse_operand() {
-    assert_eq!(str::parse::<Operand>("ACC"), Ok(Operand::Reg(Register::Acc)));
-    assert_eq!(str::parse::<Operand>("1"), Ok(Operand::Val(1)));
-    assert_eq!(str::parse::<Operand>("bad"), Err(ParseOperandError));
-}
-
-#[test]
-fn test_parse_opcode() {
-    assert_eq!(str::parse::<Opcode>("NOP"), Ok(Opcode::Nop));
-    assert_eq!(str::parse::<Opcode>("nop"), Ok(Opcode::Nop));
-    assert_eq!(str::parse::<Opcode>("MOV"), Ok(Opcode::Mov));
-    assert_eq!(str::parse::<Opcode>("SWP"), Ok(Opcode::Swp));
-    assert_eq!(str::parse::<Opcode>("SAV"), Ok(Opcode::Sav));
-    assert_eq!(str::parse::<Opcode>("ADD"), Ok(Opcode::Add));
-    assert_eq!(str::parse::<Opcode>("SUB"), Ok(Opcode::Sub));
-    assert_eq!(str::parse::<Opcode>("NEG"), Ok(Opcode::Neg));
-    assert_eq!(str::parse::<Opcode>("JMP"), Ok(Opcode::Jmp));
-    assert_eq!(str::parse::<Opcode>("JEZ"), Ok(Opcode::Jez));
-    assert_eq!(str::parse::<Opcode>("JNZ"), Ok(Opcode::Jnz));
-    assert_eq!(str::parse::<Opcode>("JGZ"), Ok(Opcode::Jgz));
-    assert_eq!(str::parse::<Opcode>("JLZ"), Ok(Opcode::Jlz));
-    assert_eq!(str::parse::<Opcode>("JRO"), Ok(Opcode::Jro));
-    assert_eq!(str::parse::<Opcode>("bad"), Err(ParseOpcodeError));
+fn test_parse_source() {
+    assert_eq!(str::parse::<Source>("ACC"), Ok(REG(ACC)));
+    assert_eq!(str::parse::<Source>("1"), Ok(VAL(1)));
+    assert_eq!(str::parse::<Source>("bad"), Err(ParseSourceError));
 }
