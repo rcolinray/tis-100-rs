@@ -80,8 +80,7 @@ impl Node for StackMemoryNode {
 }
 
 /// An execution mode of a `BasicExecutionNode`.
-#[derive(PartialEq, Eq)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Mode {
     Idle,
     Run,
@@ -302,6 +301,7 @@ impl Node for BasicExecutionNode {
     }
 }
 
+/// Limit a value in a TIS-100 register to the range -999..999 inclusive.
 fn clamp_value(value: isize) -> isize {
     if value > 999 {
         999
@@ -310,4 +310,15 @@ fn clamp_value(value: isize) -> isize {
     } else {
         value
     }
+}
+
+#[test]
+fn test_clamp_value() {
+    assert_eq!(clamp_value(1000), 999);
+    assert_eq!(clamp_value(999), 999);
+    assert_eq!(clamp_value(998), 998);
+
+    assert_eq!(clamp_value(-1000), -999);
+    assert_eq!(clamp_value(-999), -999);
+    assert_eq!(clamp_value(-998), -998);
 }

@@ -5,6 +5,7 @@ use core::*;
 use core::Instruction::*;
 use lex::{lex_program, Label, Line};
 
+/// An error that can be returned while parsing a TIS-100 assembly program.
 #[derive(Debug, PartialEq)]
 pub enum ParseProgramError {
     InvalidLabel,
@@ -20,22 +21,24 @@ pub enum ParseProgramError {
 impl Display for ParseProgramError {
     fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
         match self {
-            &InvalidLabel => f.write_str("invalid label"),
-            &UndefinedLabel(ref lbl) => f.write_fmt(format_args!("undefined label: '{}'", lbl)),
-            &DuplicateLabel(ref lbl) => f.write_fmt(format_args!("label is already defined: '{}'", lbl)),
-            &InvalidOpcode(ref op) => f.write_fmt(format_args!("invalid opcode: '{}'", op)),
-            &InvalidExpression(ref expr) => f.write_fmt(format_args!("invalid expression: '{}'", expr)),
-            &InvalidRegister(ref reg) => f.write_fmt(format_args!("invalid register: '{}'", reg)),
-            &MissingOperand(ref op) => f.write_fmt(format_args!("missing operand: '{}'", op)),
-            &TooManyOperands(ref ops) => f.write_fmt(format_args!("too many operands: '{}'", ops)),
+            &InvalidLabel => f.write_str("Invalid label"),
+            &UndefinedLabel(ref lbl) => f.write_fmt(format_args!("Undefined label: '{}'", lbl)),
+            &DuplicateLabel(ref lbl) => f.write_fmt(format_args!("Label is already defined: '{}'", lbl)),
+            &InvalidOpcode(ref op) => f.write_fmt(format_args!("Invalid opcode: '{}'", op)),
+            &InvalidExpression(ref expr) => f.write_fmt(format_args!("Invalid expression: '{}'", expr)),
+            &InvalidRegister(ref reg) => f.write_fmt(format_args!("Invalid register: '{}'", reg)),
+            &MissingOperand(ref op) => f.write_fmt(format_args!("Missing operand: '{}'", op)),
+            &TooManyOperands(ref ops) => f.write_fmt(format_args!("Too many operands: '{}'", ops)),
         }
     }
 }
 
+/// All errors discovered while parsing a TIS-100 assembly program.
 pub type ProgramErrors = Vec<(usize, ParseProgramError)>;
 
 use self::ParseProgramError::*;
 
+/// A result that can be returned intermediate phases of the parsing process.
 type ParseResult<T> = Result<T, ParseProgramError>;
 
 /// Parse the program source code into a list of instructions. If one or more errors are
@@ -58,12 +61,18 @@ type ParseResult<T> = Result<T, ParseProgramError>;
 /// assert_eq!(prog[2], Mov(REG(ACC), IO(DIR(DOWN))));
 /// ```
 pub fn parse_program(src: &str) -> Result<Program, ProgramErrors> {
+    // The basic parsing process is:
+    // 1. Tokenize the source into labels, opcodes, and operands
+    // 2. Create a mapping of labels to instruction indices
+    // 3. Parse opcodes and operands line-by-line to generate instructions
+
     let mut label_map = HashMap::new();
     let mut instructions = Vec::new();
     let mut errors = Vec::new();
 
     let lines = lex_program(src);
 
+    // Lable mapping pass
     for &Line(line_num, ref maybe_label, _) in lines.iter() {
         if let &Some(Label(ref name, index)) = maybe_label {
             if name.len() == 0 {
@@ -76,6 +85,7 @@ pub fn parse_program(src: &str) -> Result<Program, ProgramErrors> {
         }
     }
 
+    // Instruction pass
     for &Line(line_num, _, ref lexemes) in lines.iter() {
         if lexemes.len() > 0 {
             match parse_instruction(&lexemes[0], &lexemes[1..], &label_map) {
@@ -92,6 +102,7 @@ pub fn parse_program(src: &str) -> Result<Program, ProgramErrors> {
     }
 }
 
+/// Attempt to parse a single TIS-100 assembly instruction.
 fn parse_instruction(opcode: &str, operands: &[String], labels: &HashMap<String, isize>) -> ParseResult<Instruction> {
     match str::parse::<Opcode>(opcode) {
         Ok(NOP) => parse_no_operands(Nop, operands),
@@ -111,10 +122,12 @@ fn parse_instruction(opcode: &str, operands: &[String], labels: &HashMap<String,
     }
 }
 
+/// Attempt to resolve a jump label to an instruction index.
 fn resolve_label<'a>(label: &str, labels: &'a HashMap<String, isize>) -> ParseResult<&'a isize> {
     labels.get(label).ok_or(UndefinedLabel(label.to_string()))
 }
 
+/// Parse a jump opcode and label into a jump instruction.
 fn parse_jump<F: Fn(isize) -> Instruction>(f: F, opcode: &str, operands: &[String], labels: &HashMap<String, isize>) -> ParseResult<Instruction> {
     if operands.len() < 1 {
         Err(MissingOperand(opcode.to_string()))
@@ -125,6 +138,7 @@ fn parse_jump<F: Fn(isize) -> Instruction>(f: F, opcode: &str, operands: &[Strin
     }
 }
 
+/// Parse an opcode into an instruction.
 fn parse_no_operands(instruction: Instruction, operands: &[String]) -> ParseResult<Instruction> {
     if operands.len() == 0 {
         Ok(instruction)
@@ -133,6 +147,7 @@ fn parse_no_operands(instruction: Instruction, operands: &[String]) -> ParseResu
     }
 }
 
+/// Parse an opcode and one operand into an instruction.
 fn parse_one_operand<T: FromStr, F: Fn(T) -> Instruction>(f: F, opcode: &str, operands: &[String]) -> ParseResult<Instruction> {
     if operands.len() < 1 {
         Err(MissingOperand(opcode.to_string()))
@@ -146,6 +161,7 @@ fn parse_one_operand<T: FromStr, F: Fn(T) -> Instruction>(f: F, opcode: &str, op
     }
 }
 
+/// Parse an opcode and two operands into an instruction.
 fn parse_two_operands<T: FromStr, U: FromStr, F: Fn(T, U) -> Instruction>(f: F, opcode: &str, operands: &[String]) -> ParseResult<Instruction> {
     if operands.len() < 2 {
         Err(MissingOperand(opcode.to_string() + &operands.connect(" ")))

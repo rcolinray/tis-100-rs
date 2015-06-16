@@ -4,19 +4,19 @@ use node::{Node, BasicExecutionNode};
 use save::Save;
 
 #[derive(Debug)]
-pub struct Tis100 {
+pub struct Sandbox {
     nodes: Vec<BasicExecutionNode>,
     bus: IoBus,
 }
 
-impl Tis100 {
-    pub fn with_save(save: &Save) -> Tis100 {
-        let mut tis100 = Tis100 {
+impl Sandbox {
+    pub fn with_save(save: &Save) -> Sandbox {
+        let mut sandbox = Sandbox {
             nodes: Vec::new(),
             bus: IoBus::new(),
         };
-        tis100.setup(save);
-        tis100
+        sandbox.setup(save);
+        sandbox
     }
 
     fn setup(&mut self, save: &Save) {
