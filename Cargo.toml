@@ -1,6 +1,6 @@
 [package]
 name = "tis-100"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["Colin Ray <r.colinray@gmail.com>"]
 
 [lib]
