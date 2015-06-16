@@ -1,13 +1,46 @@
 # tis-100-rs [![Build Status](https://travis-ci.org/rcolinray/tis-100-rs.svg?branch=master)](https://travis-ci.org/rcolinray/tis-100-rs)
 
-An emulator for the TIS-100 written in Rust. The emulator currently implements the Simple Sandbox puzzle from the game.
+An emulator for the TIS-100 written in Rust.
 
-## Usage
+## Binaries
+
+This project includes a single binary, `sandbox`, which implements the TIS-100 *Simple Sandbox* puzzle.
 
 ```
 TIS-100 Sandbox Emulator
 
 Usage:
-    tis-100 <save.txt>
+    sandbox <save.txt>
 ```
 
+## Library
+
+If you want to embed a TIS-100 emulator in your Rust project, simply add the following dependency to your `Cargo.toml`:
+
+```toml
+[dependencies]
+tis-100 = "0.1.3"
+```
+
+Example:
+
+```rust
+extern crate tis_100;
+
+use tis_100::save::parse_save;
+use tis_100::machine::Sandbox;
+
+// This program reads the value from the console and simply passes it to the console output.
+let src = "@1\nMOV UP DOWN\n@5\nMOV UP DOWN\n@9\nMOV UP RIGHT\n@10\nMOV LEFT DOWN\n";
+
+let save = parse_save(src).unwrap();
+let mut sandbox = Sandbox::with_save(&save);
+
+sandbox.write_console(42);
+
+for _ in 0..5 {
+    sandbox.step();
+}
+
+assert_eq!(sandbox.read_console(), Some(42));
+```
