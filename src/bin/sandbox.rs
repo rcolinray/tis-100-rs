@@ -9,7 +9,7 @@ use tis_100::save::{load_save, pretty_print_errors};
 use tis_100::save::LoadSaveError::*;
 use tis_100::machine::Sandbox;
 
-const USAGE: &'static str = "TIS-100 Sandbox Emulator\n\nUsage:\n    tis-100 <save.txt>";
+const USAGE: &'static str = "TIS-100 Sandbox Emulator\n\nUsage:\n    sandbox <save.txt>";
 
 fn main() {
     let args = env::args().collect::<Vec<_>>();

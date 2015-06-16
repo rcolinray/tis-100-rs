@@ -1,3 +1,5 @@
+//! Basic types for parsing and interpreting TIS-100 assembly code.
+
 use std::str::FromStr;
 
 /// A TIS-100 port.
@@ -53,7 +55,7 @@ pub fn opposite_port(port: Port) -> Port {
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum IoRegister {
     DIR(Port),
-    ANY,
+    ANY, // All-caps so that we don't conflict with std::any::Any.
     LAST,
 }
 
@@ -120,7 +122,7 @@ pub enum Source {
 
 use self::Source::*;
 
-/// An error which can be returned when parsing an source.
+/// An error which can be returned when parsing a source.
 #[derive(Debug, PartialEq)]
 pub struct ParseSourceError;
 

@@ -1,3 +1,5 @@
+//! Functions for splitting TIS-100 assembly code into lexemes.
+
 /// The maximum number of characters per line.
 const NUM_CHARS: usize = 18;
 

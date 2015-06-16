@@ -1,3 +1,5 @@
+//! Constructs for passing messages between TIS-100 execution nodes.
+
 use std::collections::{HashMap, VecMap};
 use std::collections::hash_map::Iter;
 use core::{Port, opposite_port};
@@ -81,6 +83,7 @@ impl IoBus {
     pub fn connect_half(&mut self, from: NodeId, to: NodeId, port: Port) -> &mut Self {
         let to_port = opposite_port(port);
 
+        // Make sure that a map exists for each map.
         if !self.map_exists(&from) {
             self.insert_map(from);
         }
@@ -105,6 +108,8 @@ impl IoBus {
 
     /// Determine if two nodes are connected in a certain direction.
     pub fn is_connected(&self, from: NodeId, to: NodeId, port: Port) -> bool {
+        // Two nodes are connected if each node has a connection to the other node in opposing
+        // directions.
         if let Some(map) = self.nodes.get(&from) {
             if let Some(&Connection(_, to_node)) = map.get_output(port) {
                 if let Some(map) = self.nodes.get(&to) {
@@ -138,6 +143,9 @@ impl IoBus {
     fn write(&mut self, node: &NodeId, port: Port, value: isize) {
         if let Some(&Connection(index, _)) = self.get_output(node, port) {
             self.writes.insert(index, value);
+
+            // Writing to the IoBus causes a node to block until the value has been consumed by a
+            // read.
             self.write_blocks.insert(*node, value);
         }
     }
@@ -150,9 +158,10 @@ impl IoBus {
     /// Receive data on a given port for a node. Whenever a node reads from an input, all of the
     /// outputs on the sending node are cleared.
     fn read(&mut self, node: &NodeId, port: Port) -> Option<isize> {
-        if let Some(&Connection(index, node)) = self.get_input(node, port) {
+        if let Some(&Connection(index, out_node)) = self.get_input(node, port) {
             if let Some(val) = self.ports.remove(&index) {
-                self.clear_outputs(&node);
+                self.clear_outputs(&out_node);
+                self.write_blocks.remove(&out_node);
                 return Some(val);
             }
         }
@@ -179,9 +188,8 @@ impl IoBus {
     }
 
     /// Create a new `PortMap`.
-    fn insert_map(&mut self, node: NodeId) -> &mut Self {
+    fn insert_map(&mut self, node: NodeId) {
         self.nodes.insert(node, PortMap::new());
-        self
     }
 
     /// Check if a `PortMap` exists.
@@ -201,9 +209,6 @@ impl IoBus {
         for index in to_clear.iter() {
             self.ports.remove(index);
         }
-
-
-        self.write_blocks.remove(node);
     }
 }
 
