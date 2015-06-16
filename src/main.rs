@@ -9,12 +9,15 @@ use tis_100::save::{load_save, pretty_print_errors};
 use tis_100::save::LoadSaveError::*;
 use tis_100::machine::Sandbox;
 
+const USAGE: &'static str = "TIS-100 Sandbox Emulator\n\nUsage:\n    tis-100 <save.txt>";
+
 fn main() {
     let args = env::args().collect::<Vec<_>>();
 
     // Check args for save filename
-    if args.len() != 2 {
-        println!("Must provide a save file to load");
+    if args.len() == 1 || args[1] == "-h" || args[1] == "--help" {
+        println!("{}", USAGE);
+        return;
     }
 
     // Load and parse the save file
