@@ -1,3 +1,5 @@
+//! Functions for parsing TIS-100 assembly code into instructions.
+
 use std::str::FromStr;
 use std::fmt::{Display, Formatter, Error};
 use std::collections::HashMap;

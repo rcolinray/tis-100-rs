@@ -1,3 +1,5 @@
+//! Functions for loading TIS-100 assembly code from save files.
+
 use std::collections::VecMap;
 use std::io::Read;
 use std::fs::File;

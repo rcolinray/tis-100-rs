@@ -2,3 +2,13 @@
 name = "tis-100"
 version = "0.1.2"
 authors = ["Colin Ray <r.colinray@gmail.com>"]
+
+[lib]
+name = "tis_100"
+path = "src/lib.rs"
+
+[[bin]]
+name = "sandbox"
+path = "src/bin/sandbox.rs"
+test = false
+doctest = false

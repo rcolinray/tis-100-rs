@@ -1,3 +1,5 @@
+//! Types of nodes used in the TIS-100.
+
 use core::{Port, Register, Source, Instruction, Program};
 use core::Instruction::*;
 use core::Port::*;
