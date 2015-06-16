@@ -3,74 +3,65 @@ use std::io::Read;
 use std::fs::File;
 use core::Program;
 use parse::{parse_program, ProgramErrors};
-use error::pretty_print_save_errors;
 
+/// Programs that are assigned to specific nodes in a TIS-100.
 pub type Save = VecMap<Program>;
 
+/// A list of errors returned when parsing programs for each node.
 pub type SaveErrors = VecMap<ProgramErrors>;
 
-pub fn load_save(filename: &str) -> Option<Save> {
-    if let Ok(mut file) = File::open(filename) {
-        let mut src = String::new();
-        if let Ok(_) = file.read_to_string(&mut src) {
-            match parse_save(&src) {
-                Ok(save) => Some(save),
-                Err(errors) => {
-                    pretty_print_save_errors(errors);
-                    None
-                }
+/// An error returned when loading a safe from a file.
+pub enum LoadSaveError {
+    ParseFailed(SaveErrors),
+    LoadFailed,
+}
+
+use self::LoadSaveError::*;
+
+/// Load a `Save` from a file.
+pub fn load_save(filename: &str) -> Result<Save, LoadSaveError> {
+    match File::open(filename) {
+        Ok(mut file) => {
+            let mut src = String::new();
+            match file.read_to_string(&mut src) {
+                Ok(_) => match parse_save(&src) {
+                    Ok(prog) => Ok(prog),
+                    Err(errs) => Err(ParseFailed(errs)),
+                },
+                Err(_) => Err(LoadFailed),
             }
-        } else {
-            None
-        }
-    } else {
-        None
+        },
+        Err(_) => Err(LoadFailed),
     }
 }
 
-fn parse_save(src: &str) -> Result<Save, SaveErrors> {
+/// Parse the text of a TIS-100 save file into a map from node numbers to programs.
+pub fn parse_save(src: &str) -> Result<Save, SaveErrors> {
     let mut save = VecMap::new();
     let mut errors = VecMap::new();
-    let mut prog_src = String::new();
-    let mut num = None;
 
-    for line in src.lines() {
-        if line.starts_with("@") {
-            if let Some(n) = num {
-                match parse_program(&prog_src) {
-                    Ok(prog) => {
-                        save.insert(n, prog);
-                    },
-                    Err(errs) => {
-                        errors.insert(n, errs);
-                    },
-                };
-                prog_src.clear();
-            }
+    // Skip the first result since it will be empty.
+    for src in src.split("@").skip(1) {
+        let maybe_num = src.chars()
+            .take_while(|c| c.is_numeric())
+            .collect::<String>()
+            .parse::<usize>()
+            .ok();
 
-            num = line.chars()
+        if let Some(num) = maybe_num {
+            // Skip the first line since it has the node number.
+            let prog_src = src.lines()
                 .skip(1)
-                .take_while(|c| c.is_numeric())
-                .collect::<String>()
-                .parse::<usize>()
-                .ok();
-        } else if num != None {
-            prog_src.push_str(line);
-            prog_src.push('\n');
-        }
-    }
+                .collect::<String>();
 
-    if let Some(n) = num {
-        if prog_src.len() > 0 {
             match parse_program(&prog_src) {
                 Ok(prog) => {
-                    save.insert(n, prog);
+                    save.insert(num, prog);
                 },
                 Err(errs) => {
-                    errors.insert(n, errs);
+                    errors.insert(num, errs);
                 }
-            };
-            prog_src.clear();
+            }
         }
     }
 
@@ -79,4 +70,19 @@ fn parse_save(src: &str) -> Result<Save, SaveErrors> {
     } else {
         Ok(save)
     }
+}
+
+/// Pretty print errors from parsing a save file.
+pub fn pretty_print_errors(save_errors: SaveErrors) {
+    for (node_num, ref errors) in save_errors.iter() {
+        for &(line_num, ref error) in errors.iter() {
+            println!("Node {}: Line {}: {}\n", node_num, line_num, error);
+        }
+    }
+}
+
+#[test]
+fn test_parse_save() {
+    let save = parse_save("@1\nADD 1\n@2\nADD 1\n").unwrap();
+    assert_eq!(save.len(), 2);
 }
