@@ -1,5 +1,6 @@
 //! Types of nodes used in the TIS-100.
 
+use std::fmt::Debug;
 use core::{Port, Register, Source, Instruction, Program};
 use core::Instruction::*;
 use core::Port::*;
@@ -9,7 +10,7 @@ use core::Source::*;
 use io::IoBusView;
 
 /// Interface for nodes in a TIS-100 system.
-pub trait Node {
+pub trait Node: Debug {
     fn step(&mut self, io: &mut IoBusView);
     fn sync(&mut self, io: &mut IoBusView);
 }
