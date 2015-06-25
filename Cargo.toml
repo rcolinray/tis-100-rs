@@ -16,3 +16,12 @@ name = "sandbox"
 path = "src/bin/sandbox.rs"
 test = false
 doctest = false
+
+[[bin]]
+name = "puzzle"
+path = "src/bin/puzzle.rs"
+test = false
+doctest = false
+
+[dependencies]
+hlua = "0.1"

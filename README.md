@@ -4,13 +4,21 @@ An emulator for the TIS-100 written in Rust.
 
 ## Binaries
 
-This project includes a single binary, `sandbox`, which implements the TIS-100 *Simple Sandbox* puzzle.
+This project includes two binaries: `sandbox`, which implements the TIS-100 *Simple Sandbox* puzzle,
+and `puzzle`, which can execute arbitrary puzzles given a spec file and a save file.
 
 ```
 TIS-100 Sandbox Emulator
 
 Usage:
     sandbox <save.txt>
+```
+
+```
+TIS-100 Puzzle Emulator
+
+Usage:
+    puzzle <spec.lua> <save.txt>
 ```
 
 ## Library
@@ -34,7 +42,7 @@ use tis_100::machine::Sandbox;
 let src = "@1\nMOV UP DOWN\n@5\nMOV UP DOWN\n@9\nMOV UP RIGHT\n@10\nMOV LEFT DOWN\n";
 
 let save = parse_save(src).unwrap();
-let mut sandbox = Sandbox::with_save(&save);
+let mut sandbox = Sandbox::from_save(&save);
 
 sandbox.write_console(42);
 

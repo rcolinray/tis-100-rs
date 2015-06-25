@@ -33,7 +33,7 @@ impl FromStr for Port {
 
 /// Get the opposing direction for a given port.
 ///
-/// Example:
+/// # Example
 ///
 /// ```
 /// use tis_100::core::Port::*;
