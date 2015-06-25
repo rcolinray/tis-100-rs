@@ -18,7 +18,12 @@ pub struct Connection(PortId, NodeId);
 /// Nodes must first be connected before they can pass messages. Nodes can be connected using either
 /// half-duplex or full-duplex channels.
 ///
-/// Example:
+/// Once nodes are connected, they can pass messages through the IoBus using an `IoBusView`.
+/// An `IoBusView` ensures that a node can only read or write the ports that it is connected to.
+/// All writes are buffered. In order for a node to read a value that another node has sent it,
+/// the writes must be committed.
+///
+/// # Examples
 ///
 /// ```
 /// use tis_100::core::Port::*;
@@ -31,13 +36,6 @@ pub struct Connection(PortId, NodeId);
 /// assert!(bus.is_connected(0, 1, RIGHT));
 /// assert!(bus.is_connected(1, 0, LEFT));
 /// ```
-///
-/// Once nodes are connected, they can pass messages through the IoBus using an `IoBusView`.
-/// An `IoBusView` ensures that a node can only read or write the ports that it is connected to.
-/// All writes are buffered. In order for a node to read a value that another node has sent it,
-/// the writes must be committed.
-///
-/// Example:
 ///
 /// ```
 /// use tis_100::core::Port::*;
