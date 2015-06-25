@@ -40,7 +40,7 @@ fn main() {
 
     // TIS-100 loop
     thread::spawn(move|| {
-        let mut tis100 = Sandbox::with_save(&save);
+        let mut tis100 = Sandbox::from_save(&save);
 
         loop {
             match in_rx.try_recv() {

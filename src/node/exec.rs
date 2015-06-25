@@ -1,86 +1,17 @@
-//! Types of nodes used in the TIS-100.
-
-use std::fmt::Debug;
-use core::{Port, Register, Source, Instruction, Program};
-use core::Instruction::*;
+use super::Node;
+use core::{Program, Port, Instruction, Source, Register};
 use core::Port::*;
-use core::IoRegister::*;
-use core::Register::*;
+use core::Instruction::*;
 use core::Source::*;
+use core::Register::*;
+use core::IoRegister::*;
 use io::IoBusView;
-
-/// Interface for nodes in a TIS-100 system.
-pub trait Node: Debug {
-    fn step(&mut self, io: &mut IoBusView);
-    fn sync(&mut self, io: &mut IoBusView);
-}
 
 /// A corrupted TIS-100 node. `step` and `sync` have no effect.
 #[derive(Debug)]
-pub struct CorruptedNode;
+pub struct DamagedExecutionNode;
 
-impl Node for CorruptedNode {
-    #[allow(unused)]
-    fn step(&mut self, io: &mut IoBusView) {
-
-    }
-
-    #[allow(unused)]
-    fn sync(&mut self, io: &mut IoBusView) {
-
-    }
-}
-
-/// A node which stores values written to it on a stack. When the node is read from it will pop the
-/// top value off of the stack and return it.
-#[derive(Debug)]
-pub struct StackMemoryNode {
-    stack: Vec<isize>,
-    read_index: Option<usize>,
-}
-
-impl StackMemoryNode {
-    /// Construct a new, empty `StackMemoryNode`.
-    pub fn new() -> StackMemoryNode {
-        StackMemoryNode {
-            stack: Vec::new(),
-            read_index: None,
-        }
-    }
-}
-
-impl Node for StackMemoryNode {
-    /// At the start of each cycle, the top value is made available on all ports. Any values that
-    /// have been written to this node are then added to the stack.
-    fn step(&mut self, io: &mut IoBusView) {
-        let dirs = vec![UP, DOWN, LEFT, RIGHT];
-
-        // Use last instead of pop so that the value is only removed if a node reads it.
-        if let Some(&val) = self.stack.last() {
-            self.read_index = Some(self.stack.len() - 1);
-            for &dir in dirs.iter() {
-                io.write(dir, val);
-            }
-        }
-
-        for &dir in dirs.iter() {
-            if let Some(val) = io.read(dir) {
-                self.stack.push(val);
-            }
-        }
-    }
-
-    // At the end of each cycle, check if the top value was actually read from and clear it from
-    // the stack if it was.
-    fn sync(&mut self, io: &mut IoBusView) {
-        if !io.is_blocked() {
-            if let Some(index) = self.read_index {
-                self.stack.remove(index);
-                self.read_index = None;
-            }
-        }
-    }
-}
+impl Node for DamagedExecutionNode {}
 
 /// An execution mode of a `BasicExecutionNode`.
 #[derive(Debug, PartialEq, Eq)]
@@ -96,7 +27,7 @@ use self::Mode::*;
 /// Executes TIS-100 assembly code. Once a `Program` has been set on the node, the node may be
 /// executed using alternating calls of `step` and `sync`.
 ///
-/// Example:
+/// # Example
 ///
 /// ```
 /// use tis_100::core::Port::*;
@@ -237,10 +168,10 @@ impl BasicExecutionNode {
             REG(ACC) => Some(self.acc),
             REG(NIL) => Some(0),
             REG(IO(DIR(port))) => io.read(port),
-            REG(IO(ANY)) => io.read(UP)
-                .or_else(|| io.read(DOWN))
-                .or_else(|| io.read(LEFT))
-                .or_else(|| io.read(RIGHT)),
+            REG(IO(ANY)) => io.read(LEFT)
+                .or_else(|| io.read(RIGHT))
+                .or_else(|| io.read(UP))
+                .or_else(|| io.read(DOWN)),
             REG(IO(LAST)) => match self.last {
                 Some(port) => io.read(port),
                 None => Some(0),
@@ -302,7 +233,13 @@ impl Node for BasicExecutionNode {
             }
         }
     }
+
+    /// An execution node is stalled if it is waiting on an IO action or if it is not executing.
+    fn is_stalled(&self) -> bool {
+        self.mode != Run
+    }
 }
+
 
 /// Limit a value in a TIS-100 register to the range -999..999 inclusive.
 fn clamp_value(value: isize) -> isize {
