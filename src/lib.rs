@@ -2,7 +2,7 @@
 
 //! A TIS-100 emulator.
 //!
-//! Examples:
+//! # Example
 //!
 //! ```
 //! use tis_100::save::parse_save;
@@ -12,7 +12,7 @@
 //! let src = "@1\nMOV UP DOWN\n@5\nMOV UP DOWN\n@9\nMOV UP RIGHT\n@10\nMOV LEFT DOWN\n";
 //!
 //! let save = parse_save(src).unwrap();
-//! let mut sandbox = Sandbox::with_save(&save);
+//! let mut sandbox = Sandbox::from_save(&save);
 //!
 //! sandbox.write_console(42);
 //!
@@ -23,10 +23,14 @@
 //! assert_eq!(sandbox.read_console(), Some(42));
 //! ```
 
+extern crate hlua;
+
 pub mod core;
 pub mod lex;
 pub mod parse;
 pub mod io;
 pub mod node;
+pub mod image;
 pub mod save;
+pub mod spec;
 pub mod machine;

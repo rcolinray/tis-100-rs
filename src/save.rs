@@ -52,7 +52,8 @@ pub fn parse_save(src: &str) -> Result<Save, SaveErrors> {
 
         if let Some(num) = maybe_num {
             // Skip the first line since it has the node number.
-            let prog_src = src.lines()
+            let prog_src = src.chars()
+                .skip_while(|&c| c != '\n')
                 .skip(1)
                 .collect::<String>();
 

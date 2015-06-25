@@ -46,7 +46,7 @@ type ParseResult<T> = Result<T, ParseProgramError>;
 /// Parse the program source code into a list of instructions. If one or more errors are
 /// encountered during parsing, then the list of errors will be returned instead.
 ///
-/// Example:
+/// # Example
 ///
 /// ```
 /// use tis_100::core::Instruction::*;
