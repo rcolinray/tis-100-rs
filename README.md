@@ -1,4 +1,4 @@
-# tis-100-rs [![Build Status](https://travis-ci.org/rcolinray/tis-100-rs.svg?branch=master)](https://travis-ci.org/rcolinray/tis-100-rs)
+# tis-100-rs [![Build Status](https://travis-ci.org/rcolinray/tis-100-rs.svg?branch=master)](https://travis-ci.org/rcolinray/tis-100-rs) [![Latest Version](https://img.shields.io/crates/v/tis-100.svg)](https://crates.io/crates/tis-100)
 
 An emulator for the TIS-100 written in Rust.
 
