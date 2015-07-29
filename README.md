@@ -2,12 +2,7 @@
 
 An emulator for the TIS-100 written in Rust.
 
-**NOTE:** This project targets the `rust-nightly` channel. Due to a issue in the `hlua` dependency, it does not compile on versions after `rust-nightly-2015-06-18`.
-If you are using [multirust](https://github.com/brson/multirust), you should add an override for this project:
-
-```
-multirust override nightly-2015-06-18
-```
+**NOTE:** This project targets the `rust-nightly` channel.
 
 ## Binaries
 
