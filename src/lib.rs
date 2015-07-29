@@ -1,4 +1,4 @@
-#![feature(collections)]
+#![feature(vecmap)]
 
 //! A TIS-100 emulator.
 //!

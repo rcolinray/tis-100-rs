@@ -136,7 +136,7 @@ fn parse_jump<F: Fn(isize) -> Instruction>(f: F, opcode: &str, operands: &[Strin
     } else if operands.len() == 1 {
         resolve_label(&operands[0], labels).map(|&i| f(i))
     } else {
-        Err(TooManyOperands(operands[1..].connect(" ")))
+        Err(TooManyOperands(operands[1..].join(" ")))
     }
 }
 
@@ -145,7 +145,7 @@ fn parse_no_operands(instruction: Instruction, operands: &[String]) -> ParseResu
     if operands.len() == 0 {
         Ok(instruction)
     } else {
-        Err(TooManyOperands(operands.connect(" ")))
+        Err(TooManyOperands(operands.join(" ")))
     }
 }
 
@@ -159,14 +159,14 @@ fn parse_one_operand<T: FromStr, F: Fn(T) -> Instruction>(f: F, opcode: &str, op
             Err(_) => Err(InvalidExpression(operands[0].clone())),
         }
     } else {
-        Err(TooManyOperands(operands[1..].connect(" ")))
+        Err(TooManyOperands(operands[1..].join(" ")))
     }
 }
 
 /// Parse an opcode and two operands into an instruction.
 fn parse_two_operands<T: FromStr, U: FromStr, F: Fn(T, U) -> Instruction>(f: F, opcode: &str, operands: &[String]) -> ParseResult<Instruction> {
     if operands.len() < 2 {
-        Err(MissingOperand(opcode.to_string() + " " + &operands.connect(" ")))
+        Err(MissingOperand(opcode.to_string() + " " + &operands.join(" ")))
     } else if operands.len() == 2 {
         match str::parse::<T>(&operands[0]) {
             Ok(op1) => match str::parse::<U>(&operands[1]) {
@@ -176,7 +176,7 @@ fn parse_two_operands<T: FromStr, U: FromStr, F: Fn(T, U) -> Instruction>(f: F, 
             Err(_) => Err(InvalidExpression(operands[0].clone())),
         }
     } else {
-        Err(TooManyOperands(operands[2..].connect(" ")))
+        Err(TooManyOperands(operands[2..].join(" ")))
     }
 }
 
