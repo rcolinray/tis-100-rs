@@ -1,6 +1,6 @@
 [root]
 name = "tis-100"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "hlua 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
