@@ -1,6 +1,13 @@
-# tis-100-rs [![Build Status](https://travis-ci.org/rcolinray/tis-100-rs.svg?branch=master)](https://travis-ci.org/rcolinray/tis-100-rs)
+# tis-100-rs [![Build Status](https://travis-ci.org/rcolinray/tis-100-rs.svg?branch=master)](https://travis-ci.org/rcolinray/tis-100-rs) [![Latest Version](https://img.shields.io/crates/v/tis-100.svg)](https://crates.io/crates/tis-100)
 
 An emulator for the TIS-100 written in Rust.
+
+**NOTE:** This project targets the `rust-nightly` channel. Due to a issue in the `hlua` dependency, it does not compile on versions after `rust-nightly-2015-06-18`.
+If you are using [multirust](https://github.com/brson/multirust), you should add an override for this project:
+
+```
+multirust override nightly-2015-06-18
+```
 
 ## Binaries
 
