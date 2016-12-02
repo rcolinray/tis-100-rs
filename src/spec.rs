@@ -2,7 +2,7 @@
 
 use std::fs::File;
 use std::path::Path;
-use std::collections::VecMap;
+use vec_map::VecMap;
 use hlua::{Lua, LuaTable};
 use hlua::functions_read::LuaFunction;
 use save::Save;
@@ -213,7 +213,7 @@ impl Spec {
     pub fn setup(&mut self, cpu: &mut Tis100) {
         for (index, &tile) in self.layout.iter().enumerate() {
             let node: Box<Node> = match tile {
-                Compute => match self.save.get(&index) {
+                Compute => match self.save.get(index) {
                     Some(prog) => Box::new(BasicExecutionNode::with_program(prog.clone())),
                     None => Box::new(BasicExecutionNode::new()),
                 },

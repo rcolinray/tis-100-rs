@@ -25,3 +25,4 @@ doctest = false
 
 [dependencies]
 hlua = "0.1"
+vec_map = "0.6.0"

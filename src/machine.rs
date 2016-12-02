@@ -1,6 +1,6 @@
 //! TIS-100 emulator implementations.
 
-use std::collections::VecMap;
+use vec_map::VecMap;
 use core::Port::*;
 use io::IoBus;
 use node::{Node, TestNode, TestState, BasicExecutionNode};
@@ -61,7 +61,7 @@ impl Sandbox {
     /// Setup the connections between nodes. Each node is fully connected to its neighbors.
     fn setup(&mut self, save: &Save) {
         for node_num in 0..NUM_NODES {
-            match save.get(&node_num) {
+            match save.get(node_num) {
                 Some(prog) => self.cpu.add_node(node_num, Box::new(BasicExecutionNode::with_program(prog.clone()))),
                 None => self.cpu.add_node(node_num, Box::new(BasicExecutionNode::new())),
             };

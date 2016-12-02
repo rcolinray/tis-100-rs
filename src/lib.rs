@@ -1,5 +1,3 @@
-#![feature(vecmap)]
-
 //! A TIS-100 emulator.
 //!
 //! # Example
@@ -24,6 +22,7 @@
 //! ```
 
 extern crate hlua;
+extern crate vec_map;
 
 pub mod core;
 pub mod lex;
