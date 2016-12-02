@@ -1,6 +1,6 @@
 [package]
 name = "tis-100"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Colin Ray <r.colinray@gmail.com>"]
 description = "An emulator for the TIS-100"
 homepage = "https://github.com/rcolinray/tis-100-rs"
