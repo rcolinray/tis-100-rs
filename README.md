@@ -2,8 +2,6 @@
 
 An emulator for the TIS-100 written in Rust.
 
-**NOTE:** This project targets the `rust-nightly` channel.
-
 ## Binaries
 
 This project includes two binaries: `sandbox`, which implements the TIS-100 *Simple Sandbox* puzzle,
