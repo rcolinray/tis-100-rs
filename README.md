@@ -27,7 +27,7 @@ If you want to embed a TIS-100 emulator in your Rust project, simply add the fol
 
 ```toml
 [dependencies]
-tis-100 = "0.2.0"
+tis-100 = "0.2.2"
 ```
 
 Example:
