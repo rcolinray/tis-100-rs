@@ -2,6 +2,7 @@ extern crate tis_100;
 
 use std::env;
 use std::thread;
+use std::time;
 use tis_100::save::{load_save, pretty_print_errors};
 use tis_100::save::LoadSaveError::*;
 use tis_100::spec::Spec;
@@ -61,7 +62,7 @@ fn main() {
             break;
         }
 
-        thread::sleep_ms(1);
+        thread::sleep(time::Duration::from_millis(1));
     }
 
 }

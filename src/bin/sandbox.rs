@@ -3,6 +3,7 @@ extern crate tis_100;
 use std::io;
 use std::env;
 use std::thread;
+use std::time;
 use std::sync::mpsc::channel;
 use std::sync::mpsc::TryRecvError::*;
 use tis_100::save::{load_save, pretty_print_errors};
@@ -57,7 +58,7 @@ fn main() {
                 }
             }
 
-            thread::sleep_ms(1);
+         thread::sleep(time::Duration::from_millis(1));
         }
 
         drop(in_rx);
@@ -73,14 +74,14 @@ fn main() {
                 Err(_) => (),
             };
 
-            thread::sleep_ms(1);
+         thread::sleep(time::Duration::from_millis(1));
         }
 
         drop(out_rx);
     });
 
     // Console input loop
-    let mut stdin = io::stdin();
+    let stdin = io::stdin();
     loop {
         let mut input = String::new();
         match stdin.read_line(&mut input) {
